@@ -6,19 +6,36 @@
   border-radius: var(--radio-sm);
 }
 
+/* Portada: mismas medidas que el contenido real, sobre espresso */
+.portada--esqueleto .esq {
+  background: color-mix(in srgb, var(--color-porcelana) 13%, var(--color-superficie-oscura));
+}
+
 .esq--logo {
-  width: min(17rem, 72vw);
+  width: min(19rem, 76vw);
   aspect-ratio: 560 / 111; /* mismas proporciones que el logo */
-  margin-inline: auto;
+}
+
+.esq--frase {
+  width: min(16rem, 70vw);
+  height: 2rem;
+}
+
+.esq--descripcion {
+  width: min(22rem, 80vw);
+  height: 1.1rem;
+}
+
+.esq--boton {
+  width: 10rem;
+  height: var(--alto-toque);
+  margin-top: var(--espacio-3);
+  border-radius: var(--radio-pildora);
 }
 
 .esq--linea {
   height: 1.1em;
   margin-top: var(--espacio-3);
-}
-
-.esq--centrada {
-  margin-inline: auto;
 }
 
 .esq--corta {
@@ -47,11 +64,6 @@
 
 .esq-nav {
   position: static; /* en la carga no hace falta que sea fija */
-}
-
-/* Las líneas de la encabezado van más separadas que las del texto de tarjeta */
-.esqueleto .encabezado .esq--linea:first-of-type {
-  margin-top: var(--espacio-5);
 }
 
 @media (prefers-reduced-motion: no-preference) {

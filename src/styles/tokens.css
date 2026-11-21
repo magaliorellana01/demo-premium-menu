@@ -38,6 +38,12 @@
   --color-fondo-suave: color-mix(in srgb, var(--color-arena) 22%, var(--color-fondo));
   --color-sobre-acento: var(--color-espresso); /* texto sobre un fondo cobre */
 
+  /* Superficie oscura (portada): espresso con texto porcelana (14:1) y arena (6,6:1).
+     El cobre original también da 4,7:1 sobre espresso: sirve para texto en la portada. */
+  --color-superficie-oscura: var(--color-espresso);
+  --color-sobre-oscuro: var(--color-porcelana);
+  --color-sobre-oscuro-suave: var(--color-arena);
+
   /* ── Tipografías ──────────────────────────────────────────────── */
   /* Titulares: Liberation Serif Italic (siempre en cursiva). Texto: Lato. */
   --fuente-titulos: 'Liberation Serif', 'Tinos', 'Times New Roman', Georgia, serif;

@@ -5,9 +5,9 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 único proyecto de Supabase (Postgres + Auth + Storage) y datos separados por local (multi-tenant).
 
 - Menú público: `/:slug` (ej. `/aroma`)
-- Panel de administración: `/admin` (se construye en la Tarea 4)
+- Panel de administración: `/admin` (se construye más adelante)
 
-Estado: **Tarea 3** (diseño con la identidad de marca y navegación). Todavía no hay contacto del local, buscador, QR ni panel.
+Estado: **Tarea 4** (portada, animación de ambiente y acabados de marca). Todavía no hay contacto del local, buscador, QR ni panel.
 
 ## Cómo correrlo
 
@@ -31,6 +31,7 @@ Ver `.env.example`. Van en `.env` (ignorado por git).
 | ------------------------ | ------------------------------------------------------------------- |
 | `VITE_SUPABASE_URL`      | URL del proyecto (`https://xxxx.supabase.co`)                       |
 | `VITE_SUPABASE_ANON_KEY` | Clave pública `anon` / `publishable`                                |
+| `VITE_PUBLIC_URL`        | Dirección pública del sitio, sin barra final (`https://menu.oestack.com`). Se usa en las etiquetas Open Graph, que necesitan URLs absolutas. Si falta, quedan relativas (sirve en desarrollo, no para compartir) |
 
 Vite incorpora estas variables al momento del build: si se cambian, hay que volver a publicar.
 
@@ -83,20 +84,27 @@ curl -X POST "$URL/rest/v1/productos" -H "apikey: $ANON" -H "Authorization: Bear
 ```
 public/
   fonts/                Fuentes autoalojadas (woff2) y sus licencias
-  locales/aroma/        Logo e imágenes optimizadas del local (productos/<nombre>-240.webp y -480.webp)
+  locales/aroma/        Logos (logo, logo-claro, logo-completo) e imágenes de productos (<nombre>-240.webp y -480.webp)
+  favicon.svg, favicon-32.png, apple-touch-icon.png, icon-192.png, icon-512.png, icon-maskable-512.png, og-image.png
+                        Íconos e imagen para redes (se generan con `npm run marca`)
+  manifest.webmanifest  Web app: nombre, colores de marca, display standalone e íconos
+  robots.txt
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
+  generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
+  lib/logo.mjs          Recorte del logo y medición del símbolo (lo usan los dos scripts)
+  fuentes/              Liberation Serif Italic (subconjunto latino, TTF) para escribir la frase en la imagen social
 src/
   lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
-                        useCategoriaActiva.js, useAparecer.js, movimiento.js
-  components/           Encabezado, NavCategorias, Destacados, SeccionCategoria, TarjetaProducto,
-                        Esqueleto y Pie
+                        useCategoriaActiva.js, useAparecer.js, usePausarFueraDePantalla.js, movimiento.js, demo.js
+  components/           Portada, Granos, NavCategorias, Destacados, SeccionCategoria, TarjetaProducto,
+                        PantallaMensaje, Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
-  admin/                Panel de administración (Tarea 4)
-  styles/               tokens.css (marca), fuentes.css, base.css, menu.css, esqueleto.css
+  admin/                Panel de administración (más adelante)
+  styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, esqueleto.css
 supabase/
   schema.sql            Tablas, índices, RLS, políticas, bucket y datos de ejemplo
   02-imagenes.sql       Logo, imágenes y destacados del local aroma (se corre después de schema.sql)
@@ -118,6 +126,17 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
 
 ## Cómo funciona el menú público
 
+- **Portada:** bloque tipográfico sobre espresso (75 % de la pantalla, máximo 46 rem) con el logo claro, la frase
+  (`tema.frase`), la descripción y el botón "Ver la carta", que baja a la primera sección (destacados o, si no hay,
+  la primera categoría) y la deja justo debajo de la barra. Entra de a poco (logo, frase, descripción y botón, con retardos
+  de 0,12 s). El logo claro se deduce del logo principal por convención: `.../logo.webp` -> `.../logo-claro.webp`.
+- **Granos de café:** 12 granos SVG que caen despacio solo en la portada (cobre y arena, baja opacidad). Se animan únicamente
+  `transform` y `opacity`, se pausan cuando la portada sale de pantalla (`IntersectionObserver`) y son decorativos
+  (`aria-hidden`, sin clics). Con `prefers-reduced-motion` quedan 6 granos quietos y la portada aparece sin animación.
+- **Barra de categorías:** se pega arriba recién al pasar la portada. El esqueleto de carga incluye una portada del mismo tamaño,
+  así que no hay saltos de diseño (CLS 0).
+- **Pantallas de aviso:** "local no encontrado" y el error de carga usan el logo, las tipografías y un mensaje amable con un
+  botón para volver o reintentar. Mientras no haya una identidad propia de OESTACK usan la marca de la demo (`src/lib/demo.js`).
 - **Navegación:** barra fija con un enlace por categoría (enlaces normales a `#id`, funcionan aun sin JavaScript).
   La categoría que se está leyendo se marca con `aria-current` usando un `IntersectionObserver`.
 - **Destacados:** una sola fila horizontal con `scroll-snap`, sin barra visible. Se desliza con el dedo, el trackpad,
@@ -129,7 +148,7 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
   Los productos no disponibles se ven atenuados y con la leyenda "No disponible".
 - **Imágenes:** cada foto existe en 240 y 480 px y el `srcset` con su `sizes` deja que el navegador elija la más chica que alcance.
 - **Cliente de datos:** el menú público usa solo `@supabase/postgrest-js` (cliente liviano de lectura, en `src/lib/supabasePublico.js`);
-  su versión está fijada igual a la que trae `@supabase/supabase-js` para no duplicar código. El panel (Tarea 4) usará el cliente
+  su versión está fijada igual a la que trae `@supabase/supabase-js` para no duplicar código. El panel de administración usará el cliente
   completo, cargado solo en `/admin`.
 - **Movimiento:** la aparición de secciones y tarjetas se desactiva con `prefers-reduced-motion`.
   El contenido nunca queda oculto si falla el JavaScript o el navegador no soporta `IntersectionObserver`.
@@ -175,6 +194,28 @@ Si una imagen no llega al objetivo sin perder calidad (mínimo q62), el script l
 En la base, `imagen_url` guarda la versión de 480 px (`.../espresso-480.webp`) y `src/lib/imagenes.js` deduce la de 240 px
 para el `srcset`. Una imagen que no siga ese nombre se usa tal cual. Si en una corrida cambian los anchos, el script borra
 las versiones en desuso de las fotos que procesa.
+
+## Íconos, web app y vista previa (acabados de marca)
+
+`scripts/generar-marca.mjs` genera, con sharp, el favicon (SVG y PNG de 32 px), el `apple-touch-icon` (180 px), los íconos de
+192 y 512 px (más uno "maskable" de 512 px para Android) y la imagen para redes de 1200 x 630 px (fondo espresso, logo claro y
+la frase en la tipografía de la marca). El símbolo de cuatro puntos se **mide sobre los píxeles del logo** y se redibuja en
+vectores, así queda nítido a cualquier tamaño:
+
+```
+npm run marca -- brand public --frase "menos prisa, más aroma."
+```
+
+`public/manifest.webmanifest` (nombre "Aroma", colores de la marca, `display: standalone`) y `theme-color` permiten agregar el
+menú a la pantalla de inicio. Las etiquetas Open Graph y Twitter de `index.html` usan `VITE_PUBLIC_URL` para armar la URL absoluta
+de la imagen (`vite.config.js` reemplaza `__URL_PUBLICA__` al hacer el build).
+
+**Limitación importante (varios locales):** al ser una app de una sola página, `index.html` es el mismo para todos los locales, y
+quienes generan la vista previa (WhatsApp, Instagram, X, etc.) **no ejecutan JavaScript**: todos los locales compartirían el
+título, la descripción y la imagen de Aroma. Para esta demo está bien. Cuando haya varios locales hará falta **una función en
+Cloudflare Pages** (Pages Function o Worker) que, según el `slug` de la URL, lea el local desde Supabase e inyecte en el HTML:
+`<title>`, `description`, las etiquetas `og:*` y `twitter:*` (con la imagen del local), el `preload` del logo claro y, si se
+quiere, un manifiesto propio. En el mismo paso se resuelve la imagen social por local (hoy `og-image.png` es la de Aroma).
 
 ## Marca
 

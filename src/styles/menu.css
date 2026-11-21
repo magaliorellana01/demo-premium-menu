@@ -4,40 +4,6 @@
   padding-block: var(--espacio-7);
 }
 
-/* ── Encabezado ─────────────────────────────────────────────────── */
-.encabezado {
-  max-width: var(--ancho-max);
-  margin: 0 auto;
-  padding: var(--espacio-7) var(--espacio-4) var(--espacio-6);
-  text-align: center;
-}
-
-.encabezado__titulo {
-  font-size: var(--texto-2xl);
-}
-
-.encabezado__logo {
-  display: block;
-  width: min(17rem, 72vw);
-  height: auto;
-  margin-inline: auto;
-}
-
-.encabezado__descripcion {
-  max-width: 30rem;
-  margin: var(--espacio-5) auto 0;
-  color: var(--color-texto-suave);
-}
-
-/* Frase de tono de la marca */
-.encabezado__frase {
-  margin-top: var(--espacio-3);
-  font-family: var(--fuente-titulos);
-  font-style: italic;
-  font-size: var(--texto-lg);
-  color: var(--color-acento-texto);
-}
-
 /* ── Barra fija de categorías ───────────────────────────────────── */
 .nav {
   position: sticky;
@@ -354,14 +320,6 @@
 
 /* ── Pantallas más grandes ──────────────────────────────────────── */
 @media (min-width: 640px) {
-  .encabezado__descripcion {
-    font-size: var(--texto-lg);
-  }
-
-  .encabezado__frase {
-    font-size: var(--texto-xl);
-  }
-
   .destacados__interior,
   .categorias {
     padding-inline: var(--espacio-5);

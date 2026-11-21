@@ -6,6 +6,12 @@ const ANCHO_480 = /-480\.webp$/
 
 export const PROPORCION_PRODUCTO = { ancho: 480, alto: 600 } // 4:5
 
+// Logo para fondos oscuros: por convención está junto al logo principal, con el
+// sufijo "-claro" (ver `npm run imagenes -- logo`). Devuelve null si no se puede deducir.
+export function logoClaro(url) {
+  return url?.endsWith('/logo.webp') ? url.replace(/logo\.webp$/, 'logo-claro.webp') : null
+}
+
 // Devuelve { src, srcSet } para el <img>. El atributo sizes lo define cada
 // componente, porque depende del ancho que ocupa la imagen en su diseño.
 export function imagenProducto(url) {

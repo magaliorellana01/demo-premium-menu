@@ -17,6 +17,7 @@ import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { extname, basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import sharp from 'sharp'
+import { leerLogo, LOGO_FONDO_CLARO, LOGO_FONDO_OSCURO } from './lib/logo.mjs'
 
 const PROPORCION = 4 / 5 // ancho / alto de las fotos de productos
 const ANCHOS = [240, 480] // miniaturas (pantalla normal) y pantallas de alta densidad
@@ -90,46 +91,15 @@ async function productos(origen, destino, config) {
   }
 }
 
-// Caja (izquierda, arriba, derecha, abajo) de lo que no es transparente, entre dos alturas.
-function cajaDeContenido({ data, info }, desde = 0, hasta = info.height) {
-  let izq = info.width, arriba = hasta, der = 0, abajo = desde
-  for (let y = desde; y < hasta; y++) {
-    for (let x = 0; x < info.width; x++) {
-      if (data[(y * info.width + x) * info.channels + 3] !== 0) {
-        if (x < izq) izq = x
-        if (x + 1 > der) der = x + 1
-        if (y < arriba) arriba = y
-        if (y + 1 > abajo) abajo = y + 1
-      }
-    }
-  }
-  return { izq, arriba, der, abajo }
-}
-
-function conMargen(caja, margen, { width, height }) {
-  const izq = Math.max(caja.izq - margen, 0)
-  const arriba = Math.max(caja.arriba - margen, 0)
-  const der = Math.min(caja.der + margen, width)
-  const abajo = Math.min(caja.abajo + margen, height)
-  return { left: izq, top: arriba, width: der - izq, height: abajo - arriba }
-}
-
 async function logo(origen, destino) {
   await mkdir(destino, { recursive: true })
   const variantes = [
-    ['Aroma_Logo_Premium_Transparente.png', ''], // letras oscuras: para fondo claro
-    ['Aroma_Logo_Premium_Claro.png', '-claro'], // letras claras: para fondo oscuro
+    [LOGO_FONDO_CLARO, ''], // letras oscuras: para fondo claro
+    [LOGO_FONDO_OSCURO, '-claro'], // letras claras: para fondo oscuro
   ]
 
   for (const [archivo, sufijo] of variantes) {
-    const ruta = join(origen, archivo)
-    const pixeles = await sharp(ruta).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
-    const tamano = pixeles.info
-    const total = cajaDeContenido(pixeles)
-    // El wordmark ocupa la parte de arriba; la bajada, la de abajo (hay un hueco entre las dos).
-    const corte = total.arriba + Math.round((total.abajo - total.arriba) * 0.45)
-    const wordmark = conMargen(cajaDeContenido(pixeles, 0, corte), 6, tamano)
-    const completo = conMargen(total, 6, tamano)
+    const { ruta, wordmark, completo } = await leerLogo(origen, archivo)
 
     // wordmark (encabezado): ambas variantes. Logo completo con bajada: solo para fondo claro.
     const salidas = [[`logo${sufijo}`, wordmark, 560]]

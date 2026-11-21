@@ -2,16 +2,47 @@
 <html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#F4EEE5" />
-    <meta name="description" content="Menú digital." />
+    <title>Menú digital</title>
+    <meta name="description" content="Cafetería de especialidad. Un café, un ritual." />
+
+    <!-- Íconos y web app (se generan con `npm run marca`) -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#251E1A" />
+
+    <!--
+      Vista previa al compartir (WhatsApp, redes). Quienes la generan no ejecutan
+      JavaScript, así que estas etiquetas son iguales para todos los locales.
+      Para la demo de Aroma está bien; con varios locales hay que inyectarlas por
+      slug (ver README). __URL_PUBLICA__ lo completa vite.config.js desde VITE_PUBLIC_URL.
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="es_AR" />
+    <meta property="og:site_name" content="Aroma" />
+    <meta property="og:title" content="Aroma · Menú" />
+    <meta property="og:description" content="Cafetería de especialidad. Un café, un ritual." />
+    <meta property="og:image" content="__URL_PUBLICA__/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Aroma: menos prisa, más aroma." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Aroma · Menú" />
+    <meta name="twitter:description" content="Cafetería de especialidad. Un café, un ritual." />
+    <meta name="twitter:image" content="__URL_PUBLICA__/og-image.png" />
+
     <!-- Abre la conexión con Supabase mientras se descarga el JS (Vite completa la URL desde .env) -->
     <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
-    <!-- Fuentes de la marca (autoalojadas): se precargan las de uso más frecuente -->
+
+    <!--
+      Recursos críticos de la portada, con prioridad alta: el logo claro y las fuentes.
+      El logo es el de Aroma (demo): con varios locales lo inyecta la misma función que las etiquetas de arriba.
+    -->
+    <link rel="preload" href="/locales/aroma/logo-claro.webp" as="image" type="image/webp" fetchpriority="high" />
     <link rel="preload" href="/fonts/lato-regular.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/liberation-serif-italic.woff2" as="font" type="font/woff2" crossorigin />
-    <title>Menú digital</title>
   </head>
   <body>
     <div id="root"></div>

@@ -1,0 +1,16 @@
+{
+  "name": "Aroma",
+  "short_name": "Aroma",
+  "description": "Menú digital de Aroma, cafetería de especialidad.",
+  "lang": "es-AR",
+  "start_url": "/aroma",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#251e1a",
+  "theme_color": "#251e1a",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

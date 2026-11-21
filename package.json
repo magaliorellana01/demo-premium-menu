@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "verificar:rls": "node --env-file=.env scripts/verificar-rls.mjs",
     "imagenes": "node scripts/optimizar-imagenes.mjs",
-    "marca": "node scripts/generar-marca.mjs"
+    "marca": "node scripts/generar-marca.mjs",
+    "probar": "node scripts/probar-horarios.mjs && node scripts/probar-contacto.mjs"
   },
   "dependencies": {
     "@supabase/postgrest-js": "2.119.2",

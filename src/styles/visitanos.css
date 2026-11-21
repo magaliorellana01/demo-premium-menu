@@ -1,0 +1,83 @@
+/* Sección "Visitanos": horarios de la semana, dirección y botones de contacto. */
+
+.visitanos__cuerpo {
+  display: grid;
+  gap: var(--espacio-6);
+}
+
+.visitanos__subtitulo {
+  margin-bottom: var(--espacio-3);
+  font-size: var(--texto-lg);
+}
+
+/* ── Horarios (lista de definición) ─────────────────────────────── */
+.semana {
+  margin: 0;
+}
+
+.semana__fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--espacio-4);
+  padding: var(--espacio-2) var(--espacio-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-borde) 45%, var(--color-fondo));
+}
+
+.semana__dia {
+  display: flex;
+  align-items: baseline;
+  gap: var(--espacio-2);
+}
+
+.semana__tramos {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.semana__tramos--cerrado {
+  color: var(--color-texto-suave);
+}
+
+/* Hoy: fondo suave, marca lateral, "Hoy" escrito y letra más fuerte (no solo color) */
+.semana__fila--hoy {
+  background: var(--color-fondo-suave);
+  box-shadow: inset 3px 0 0 var(--color-acento);
+  font-weight: var(--peso-fuerte);
+}
+
+.semana__hoy {
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--color-acento);
+  border-radius: var(--radio-pildora);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ── Dirección y botones ────────────────────────────────────────── */
+.visitanos__direccion {
+  margin-bottom: var(--espacio-5);
+}
+
+.visitanos__acciones {
+  display: grid;
+  gap: var(--espacio-3);
+  max-width: 24rem;
+}
+
+@media (min-width: 768px) {
+  .visitanos__cuerpo {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--espacio-7);
+    align-items: start;
+  }
+
+  /* Si hay un solo bloque, no deja media pantalla vacía */
+  .visitanos__bloque:only-child {
+    grid-column: 1 / -1;
+    max-width: 30rem;
+  }
+}

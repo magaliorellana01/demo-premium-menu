@@ -1,0 +1,64 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-base);
+  line-height: var(--interlineado-texto);
+  -webkit-text-size-adjust: 100%;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: var(--fuente-titulos);
+  font-style: italic;
+  font-weight: var(--peso-regular);
+  line-height: var(--interlineado-titulos);
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-acento-texto);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Foco visible para navegar con teclado */
+:focus-visible {
+  outline: 2px solid var(--color-acento-texto);
+  outline-offset: 2px;
+}
+
+.contenedor {
+  max-width: var(--ancho-lectura);
+  margin: 0 auto;
+  padding-inline: var(--espacio-4);
+}
+
+/* Pie discreto */
+.pie {
+  padding: var(--espacio-6) var(--espacio-4);
+  text-align: center;
+  font-size: var(--texto-xs);
+  color: var(--color-texto-suave);
+}

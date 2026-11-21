@@ -1,0 +1,29 @@
+/*
+  Fuentes autoalojadas (public/fonts/), subconjunto latino: cubre el español.
+  Solo los pesos que usa el diseño: Lato Regular y Bold, Liberation Serif Italic.
+  Licencias (SIL OFL 1.1) junto a los archivos.
+*/
+
+@font-face {
+  font-family: 'Lato';
+  src: url('/fonts/lato-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Lato';
+  src: url('/fonts/lato-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Liberation Serif';
+  src: url('/fonts/liberation-serif-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}

@@ -1,0 +1,84 @@
+/*
+  Tokens de marca: identidad de Aroma (cafetería de especialidad).
+  Fuente: "Aroma Atelier Brand Book Premium" (PDF, 2026).
+
+  Cada local puede sobrescribir estos valores con el campo `tema` de la base
+  de datos (ver "Roles"). Para Aroma `tema` queda vacío: la marca vive acá.
+*/
+
+:root {
+  /* ── Paleta (HEX exactos del PDF) ─────────────────────────────── */
+  --color-espresso: #251e1a;
+  --color-porcelana: #f4eee5;
+  --color-cobre: #b6784f;
+  --color-salvia: #6a7058;
+  --color-arena: #b6a38c;
+
+  /*
+    Color DERIVADO (no es del PDF): cobre oscurecido para texto chico y enlaces.
+    El cobre original da solo 3,15:1 sobre porcelana (AA exige 4,5:1 en texto
+    chico). Este mantiene el matiz y llega a 4,77:1 sobre porcelana.
+    Usar el cobre original solo para botones, íconos, detalles y títulos grandes.
+  */
+  --color-cobre-texto: #905d3c;
+
+  /*
+    Nota de contraste: salvia sobre porcelana da 4,47:1, apenas debajo de AA.
+    No usarlo como color de texto chico; sí como relleno, borde o texto grande.
+  */
+
+  /* ── Roles (lo que usan los componentes) ──────────────────────── */
+  --color-fondo: var(--color-porcelana);
+  --color-texto: var(--color-espresso);
+  --color-texto-suave: color-mix(in srgb, var(--color-texto) 75%, var(--color-fondo));
+  --color-acento: var(--color-cobre); /* botones, íconos, detalles, títulos grandes */
+  --color-acento-texto: var(--color-cobre-texto); /* texto chico y enlaces */
+  --color-secundario: var(--color-salvia); /* etiquetas y "disponible" */
+  --color-borde: var(--color-arena);
+  --color-fondo-suave: color-mix(in srgb, var(--color-arena) 22%, var(--color-fondo));
+  --color-sobre-acento: var(--color-espresso); /* texto sobre un fondo cobre */
+
+  /* ── Tipografías ──────────────────────────────────────────────── */
+  /* Titulares: Liberation Serif Italic (siempre en cursiva). Texto: Lato. */
+  --fuente-titulos: 'Liberation Serif', 'Tinos', 'Times New Roman', Georgia, serif;
+  --fuente-texto: 'Lato', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --peso-regular: 400;
+  --peso-fuerte: 700;
+
+  /* Escala tipográfica (rem: respeta el tamaño de letra del usuario) */
+  --texto-xs: 0.8125rem;
+  --texto-sm: 0.9375rem;
+  --texto-base: 1rem;
+  --texto-lg: 1.25rem;
+  --texto-xl: 1.75rem;
+  --texto-2xl: 2.5rem;
+
+  --interlineado-texto: 1.55;
+  --interlineado-titulos: 1.15;
+
+  /* ── Espaciados (base de 4 px) ────────────────────────────────── */
+  --espacio-1: 0.25rem;
+  --espacio-2: 0.5rem;
+  --espacio-3: 0.75rem;
+  --espacio-4: 1rem;
+  --espacio-5: 1.5rem;
+  --espacio-6: 2rem;
+  --espacio-7: 3rem;
+  --espacio-8: 4.5rem;
+
+  /* ── Radios ───────────────────────────────────────────────────── */
+  --radio-sm: 4px;
+  --radio-md: 8px;
+  --radio-lg: 16px;
+  --radio-pildora: 999px;
+
+  /* ── Sombra (luz suave, sin dureza) ───────────────────────────── */
+  --sombra-suave: 0 1px 2px color-mix(in srgb, var(--color-espresso) 8%, transparent),
+    0 6px 20px color-mix(in srgb, var(--color-espresso) 7%, transparent);
+
+  /* ── Layout ───────────────────────────────────────────────────── */
+  --ancho-max: 72rem;
+  --ancho-lectura: 40rem;
+  --alto-toque: 2.75rem; /* 44 px: mínimo cómodo para tocar */
+}

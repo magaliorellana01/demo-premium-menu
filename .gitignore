@@ -1,0 +1,31 @@
+# Dependencias y build
+node_modules
+dist
+dist-ssr
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Entorno local: las claves reales van en .env, que nunca se versiona.
+# .env.example SÍ se versiona (sin valores reales).
+.env
+.env.*
+!.env.example
+*.local
+
+# Material de origen de la marca (PDF, logos y fotos originales).
+# Las imágenes optimizadas que usa la app van en public/ o en Supabase Storage.
+brand/
+
+# Editores y sistema
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.sw?
+
+# Cloudflare
+.wrangler

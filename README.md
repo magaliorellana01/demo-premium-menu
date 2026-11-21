@@ -7,7 +7,7 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 - Menú público: `/:slug` (ej. `/aroma`)
 - Panel de administración: `/admin` (se construye en la Tarea 4)
 
-Estado: **Tarea 2** (menú público: estructura, logo e imágenes). La navegación por categorías, el pulido visual y el resto del diseño vienen en la Tarea 3.
+Estado: **Tarea 3** (diseño con la identidad de marca y navegación). Todavía no hay contacto del local, buscador, QR ni panel.
 
 ## Cómo correrlo
 
@@ -21,7 +21,7 @@ Abrir http://localhost:5173/aroma. Otros comandos: `npm run build` (genera `dist
 `npm run lint`, `npm run verificar:rls` y `npm run imagenes`.
 
 Antes de la primera vez hay que crear el proyecto de Supabase y pegar `supabase/schema.sql`
-y después `supabase/02-imagenes.sql` en el SQL Editor (paso a paso más abajo).
+y después `supabase/02-imagenes.sql`, `supabase/03-frase.sql` y `supabase/04-imagenes-480.sql` en el SQL Editor (paso a paso más abajo).
 
 ## Variables de entorno
 
@@ -50,7 +50,12 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
 6. En **SQL Editor > New query**, pegar y correr `supabase/02-imagenes.sql`: carga el logo y las imágenes de los
    productos y marca los destacados. Se puede correr más de una vez. Al final devuelve una fila de control
    (18 productos, 18 con imagen, 5 destacados).
-7. `npm run dev` y abrir `/aroma`.
+7. Pegar y correr `supabase/03-frase.sql`: agrega la frase de tono ("menos prisa, más aroma.") al `tema` del local.
+   Es opcional: sin frase, el encabezado simplemente no la muestra.
+8. Pegar y correr `supabase/04-imagenes-480.sql`: pasa `imagen_url` de la versión de 800 px a la de 480 px (las de 800 px
+   ya no existen). Se puede correr más de una vez; si el `02` ya se corrió con 800 px, este paso es obligatorio. Al final devuelve
+   una fila de control (`quedan_800 = 0`, `con_480 = 18`, `productos = 18`).
+9. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -78,21 +83,25 @@ curl -X POST "$URL/rest/v1/productos" -H "apikey: $ANON" -H "Authorization: Bear
 ```
 public/
   fonts/                Fuentes autoalojadas (woff2) y sus licencias
-  locales/aroma/        Logo e imágenes optimizadas del local (productos/<nombre>-480.webp y -800.webp)
+  locales/aroma/        Logo e imágenes optimizadas del local (productos/<nombre>-240.webp y -480.webp)
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   aroma-imagenes.json   Renombres de las fotos de Aroma
 src/
-  lib/                  supabase.js (cliente), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js
-  components/           Encabezado, Destacados, SeccionCategoria, TarjetaProducto y Pie
+  lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
+                        useCategoriaActiva.js, useAparecer.js, movimiento.js
+  components/           Encabezado, NavCategorias, Destacados, SeccionCategoria, TarjetaProducto,
+                        Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
   admin/                Panel de administración (Tarea 4)
-  styles/               tokens.css (marca), fuentes.css, base.css, menu.css
+  styles/               tokens.css (marca), fuentes.css, base.css, menu.css, esqueleto.css
 supabase/
   schema.sql            Tablas, índices, RLS, políticas, bucket y datos de ejemplo
   02-imagenes.sql       Logo, imágenes y destacados del local aroma (se corre después de schema.sql)
+  03-frase.sql          Frase de tono del encabezado (tema.frase)
+  04-imagenes-480.sql   Migra imagen_url de la versión de 800 px a la de 480 px
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -107,6 +116,43 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
 - Storage: bucket público `imagenes` (webp, jpeg y png, máx. 2 MB). Cada local sube solo a su carpeta `<local_id>/...`.
 - El slug `admin` está reservado para el panel.
 
+## Cómo funciona el menú público
+
+- **Navegación:** barra fija con un enlace por categoría (enlaces normales a `#id`, funcionan aun sin JavaScript).
+  La categoría que se está leyendo se marca con `aria-current` usando un `IntersectionObserver`.
+- **Destacados:** una sola fila horizontal con `scroll-snap`, sin barra visible. Se desliza con el dedo, el trackpad,
+  el teclado (Tab recorre las tarjetas) o, en pantallas de 1024 px o más **cuando las tarjetas no entran en el ancho**,
+  con los botones anterior y siguiente. La rueda vertical del mouse sigue desplazando la página a propósito, para no
+  "atrapar" el scroll; con Shift + rueda o con el trackpad horizontal, la fila se mueve.
+- **Tarjetas de producto:** son contenido estático (no se tocan). En las categorías son horizontales y compactas: miniatura 4:5
+  a un lado; al otro, nombre y precio en la misma línea, descripción y etiquetas. Una columna en celular y dos desde 768 px.
+  Los productos no disponibles se ven atenuados y con la leyenda "No disponible".
+- **Imágenes:** cada foto existe en 240 y 480 px y el `srcset` con su `sizes` deja que el navegador elija la más chica que alcance.
+- **Cliente de datos:** el menú público usa solo `@supabase/postgrest-js` (cliente liviano de lectura, en `src/lib/supabasePublico.js`);
+  su versión está fijada igual a la que trae `@supabase/supabase-js` para no duplicar código. El panel (Tarea 4) usará el cliente
+  completo, cargado solo en `/admin`.
+- **Movimiento:** la aparición de secciones y tarjetas se desactiva con `prefers-reduced-motion`.
+  El contenido nunca queda oculto si falla el JavaScript o el navegador no soporta `IntersectionObserver`.
+- **Frase de tono:** sale de `locales.tema.frase`; cada local puede tener la suya.
+
+## Medir el rendimiento (Lighthouse)
+
+Con el build de producción y el servidor de vista previa:
+
+```
+npm run build
+npm run preview          # sirve http://localhost:4173
+```
+
+Y en otra terminal (usa tu Chrome; el informe queda en `lighthouse.html`):
+
+```
+npx lighthouse http://localhost:4173/aroma --form-factor=mobile --view
+```
+
+O en Chrome: abrir `http://localhost:4173/aroma`, DevTools (F12) > pestaña **Lighthouse** > modo **Mobile** > **Analyze page load**.
+Conviene correrlo en una ventana de incógnito y varias veces: el rendimiento varía entre corridas.
+
 ## Optimizar imágenes (logos y fotos de productos)
 
 `scripts/optimizar-imagenes.mjs` toma el material de origen (`brand/`) y deja las versiones livianas en `public/`.
@@ -114,7 +160,7 @@ Usa [sharp](https://sharp.pixelplumbing.com/) (devDependency), así que alcanza 
 `npm run imagenes` (los argumentos van después de `--`):
 
 ```
-# Fotos de productos: recorte 4:5, WebP en 480 y 800 px, apuntando a 60 KB o menos
+# Fotos de productos: recorte 4:5, WebP en 240 y 480 px, apuntando a 60 KB o menos
 npm run imagenes -- productos brand public/locales/aroma/productos --config scripts/aroma-imagenes.json
 
 # Logos: recorta el margen vacío (logo, logo-claro y logo-completo)
@@ -126,8 +172,9 @@ Se renombran con `--config` (un JSON con `renombres` y, si un recorte corta el p
 con el foco `[x, y]` de 0 a 1). Para otro local: copiar el JSON, ajustar los nombres y cambiar las carpetas.
 Si una imagen no llega al objetivo sin perder calidad (mínimo q62), el script lo avisa en lugar de degradarla.
 
-En la base, `imagen_url` guarda la versión de 800 px (`.../espresso-800.webp`) y `src/lib/imagenes.js` deduce la de 480 px
-para el `srcset`. Una imagen que no siga ese nombre se usa tal cual.
+En la base, `imagen_url` guarda la versión de 480 px (`.../espresso-480.webp`) y `src/lib/imagenes.js` deduce la de 240 px
+para el `srcset`. Una imagen que no siga ese nombre se usa tal cual. Si en una corrida cambian los anchos, el script borra
+las versiones en desuso de las fotos que procesa.
 
 ## Marca
 

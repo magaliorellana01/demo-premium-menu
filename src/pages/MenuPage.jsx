@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import Destacados from '../components/Destacados'
 import Encabezado from '../components/Encabezado'
+import Esqueleto from '../components/Esqueleto'
+import NavCategorias from '../components/NavCategorias'
 import Pie from '../components/Pie'
 import SeccionCategoria from '../components/SeccionCategoria'
 import { useLocal } from '../lib/useLocal'
@@ -12,10 +14,12 @@ export default function MenuPage() {
   const { cargando, local, error } = useLocal(slug)
 
   useEffect(() => {
-    if (local) document.title = `${local.nombre} · Menú`
+    if (!local) return
+    document.title = `${local.nombre} · Menú`
+    document.querySelector('meta[name="description"]')?.setAttribute('content', local.descripcion || `Menú de ${local.nombre}.`)
   }, [local])
 
-  if (cargando) return <p className="contenedor estado" role="status">Cargando…</p>
+  if (cargando) return <Esqueleto />
   if (error) {
     return (
       <main className="contenedor estado">
@@ -26,23 +30,25 @@ export default function MenuPage() {
   }
   if (!local) return <NoEncontrado />
 
-  const destacados = local.categorias.flatMap((categoria) =>
-    categoria.productos.filter((producto) => producto.destacado),
-  )
+  const categorias = local.categorias.filter((categoria) => categoria.productos.length > 0)
+  const destacados = categorias.flatMap((categoria) => categoria.productos.filter((producto) => producto.destacado))
 
   return (
     <>
       <Encabezado local={local} />
-      <main className="menu">
+      <NavCategorias categorias={categorias} />
+      <main>
         <Destacados productos={destacados} />
-        {local.categorias.map((categoria, indice) => (
-          <SeccionCategoria
-            key={categoria.id}
-            categoria={categoria}
-            // Sin destacados, las primeras imágenes de la primera categoría son las que se ven al abrir.
-            imagenesPrioritarias={indice === 0 && destacados.length === 0 ? 2 : 0}
-          />
-        ))}
+        <div className="categorias">
+          {categorias.map((categoria, indice) => (
+            <SeccionCategoria
+              key={categoria.id}
+              categoria={categoria}
+              // Sin destacados, las primeras imágenes de la primera categoría son las que se ven al abrir.
+              imagenesPrioritarias={indice === 0 && destacados.length === 0 ? 2 : 0}
+            />
+          ))}
+        </div>
       </main>
       <Pie />
     </>

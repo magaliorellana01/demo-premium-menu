@@ -1,44 +1,55 @@
 import { formatearPrecio } from '../lib/formato'
 import { imagenProducto, PROPORCION_PRODUCTO } from '../lib/imagenes'
+import { useAparecer } from '../lib/useAparecer'
 
-// Qué ancho ocupa la imagen según la pantalla, para que el navegador elija
-// entre la de 480 y la de 800 px. La tarjeta normal es horizontal en celular
-// (miniatura de 7 rem); la destacada es vertical en todos los tamaños.
-const TAMANOS_NORMAL = '(min-width: 1024px) 22rem, (min-width: 640px) 45vw, 7rem'
-const TAMANOS_DESTACADA = '(min-width: 1024px) 22rem, (min-width: 640px) 45vw, 100vw'
+// Ancho real de la imagen según la pantalla (debe coincidir con menu.css), para
+// que el navegador elija la de 240 o la de 480 px: la más chica que alcance.
+const TAMANOS = '(min-width: 1024px) 8rem, (min-width: 768px) 7.5rem, 6.5rem'
+const TAMANOS_COMPACTA = '(min-width: 768px) 11rem, 8rem'
 
+// Contenido estático (no es un botón ni un enlace).
+// compacta: versión vertical para la fila de destacados (imagen, nombre y precio).
 // prioridad: la imagen se ve apenas abre la página, así que no se difiere su carga.
-export default function TarjetaProducto({ producto, destacada = false, prioridad = false }) {
+export default function TarjetaProducto({ producto, compacta = false, prioridad = false }) {
+  const ref = useAparecer()
   const imagen = imagenProducto(producto.imagen_url)
   const etiquetas = producto.etiquetas ?? []
 
   const clases = ['tarjeta']
-  if (destacada) clases.push('tarjeta--destacada')
+  if (compacta) clases.push('tarjeta--compacta')
+  else clases.push('aparece') // las compactas aparecen junto con su sección
   if (!producto.disponible) clases.push('tarjeta--no-disponible')
 
   return (
-    <li className={clases.join(' ')}>
+    <li ref={ref} className={clases.join(' ')}>
       {imagen && (
         <div className="tarjeta__imagen">
           <img
             src={imagen.src}
             srcSet={imagen.srcSet}
-            sizes={imagen.srcSet ? (destacada ? TAMANOS_DESTACADA : TAMANOS_NORMAL) : undefined}
+            sizes={imagen.srcSet ? (compacta ? TAMANOS_COMPACTA : TAMANOS) : undefined}
             alt={producto.nombre}
             width={PROPORCION_PRODUCTO.ancho}
             height={PROPORCION_PRODUCTO.alto}
             loading={prioridad ? 'eager' : 'lazy'}
+            fetchPriority={prioridad ? 'high' : 'low'}
             decoding="async"
           />
         </div>
       )}
 
       <div className="tarjeta__cuerpo">
-        <h3 className="tarjeta__nombre">{producto.nombre}</h3>
-        {producto.descripcion && <p className="tarjeta__descripcion">{producto.descripcion}</p>}
+        <div className="tarjeta__cabecera">
+          <h3 className="tarjeta__nombre">{producto.nombre}</h3>
+          <p className="tarjeta__precio">{formatearPrecio(producto.precio)}</p>
+        </div>
 
-        {etiquetas.length > 0 && (
-          <ul className="etiquetas" aria-label="Etiquetas">
+        {!producto.disponible && <p className="tarjeta__aviso">No disponible</p>}
+
+        {!compacta && producto.descripcion && <p className="tarjeta__descripcion">{producto.descripcion}</p>}
+
+        {!compacta && etiquetas.length > 0 && (
+          <ul className="etiquetas" aria-label="Etiquetas" role="list">
             {etiquetas.map((etiqueta) => (
               <li key={etiqueta} className="etiqueta">
                 {etiqueta}
@@ -46,11 +57,6 @@ export default function TarjetaProducto({ producto, destacada = false, prioridad
             ))}
           </ul>
         )}
-
-        <p className="tarjeta__pie">
-          <span className="tarjeta__precio">{formatearPrecio(producto.precio)}</span>
-          {!producto.disponible && <span className="tarjeta__aviso">No disponible</span>}
-        </p>
       </div>
     </li>
   )

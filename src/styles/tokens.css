@@ -78,7 +78,13 @@
     0 6px 20px color-mix(in srgb, var(--color-espresso) 7%, transparent);
 
   /* ── Layout ───────────────────────────────────────────────────── */
-  --ancho-max: 72rem;
+  --ancho-max: 60rem;
   --ancho-lectura: 40rem;
   --alto-toque: 2.75rem; /* 44 px: mínimo cómodo para tocar */
+  --alto-nav: 3.5rem; /* barra fija de categorías */
+
+  /* ── Movimiento (se desactiva con prefers-reduced-motion) ─────── */
+  --duracion-corta: 0.25s;
+  --duracion: 0.6s;
+  --easing: cubic-bezier(0.2, 0.7, 0.2, 1);
 }

@@ -3,7 +3,7 @@
 //
 // Uso (desde la raíz del proyecto), con el script de package.json:
 //
-//   # Fotos de productos: recorte 4:5, WebP en dos anchos (480 y 800 px)
+//   # Fotos de productos: recorte 4:5, WebP en dos anchos (240 y 480 px)
 //   npm run imagenes -- productos brand public/locales/aroma/productos --config scripts/aroma-imagenes.json
 //
 //   # Logos: recorta el margen vacío y genera las variantes
@@ -13,16 +13,16 @@
 //   "renombres": { "nombre-original": "nombre-limpio" }   (sin extensión)
 //   "encuadre":  { "nombre-limpio": [x, y] }               (0 a 1; por defecto [0.5, 0.5])
 //   Si un recorte corta el producto, el encuadre decide qué parte se conserva.
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { extname, basename, join } from 'node:path'
 import { parseArgs } from 'node:util'
 import sharp from 'sharp'
 
 const PROPORCION = 4 / 5 // ancho / alto de las fotos de productos
-const ANCHOS = [480, 800] // celular y pantallas grandes / retina
+const ANCHOS = [240, 480] // miniaturas (pantalla normal) y pantallas de alta densidad
 const PESO_MAX = 60 * 1024 // objetivo por imagen, en bytes
 const CALIDAD_MIN = 62 // por debajo de esto se notan los artefactos en las texturas
-const CALIDAD_MAX = { 480: 80, 800: 85 }
+const CALIDAD_MAX = { 240: 82, 480: 80 }
 const EXTENSIONES = ['.webp', '.jpg', '.jpeg', '.png']
 
 const kb = (bytes) => `${(bytes / 1024).toFixed(1)} KB`
@@ -67,6 +67,16 @@ async function productos(origen, destino, config) {
     const foco = encuadre[nombre] ?? [0.5, 0.5]
     const ruta = join(origen, archivo)
     const zona = zonaDeRecorte(await sharp(ruta).metadata(), foco)
+
+    // Borra versiones de otros anchos que hayan quedado de corridas anteriores
+    for (const existente of await readdir(destino)) {
+      if (!existente.startsWith(`${nombre}-`) || !existente.endsWith('.webp')) continue
+      const ancho = existente.slice(nombre.length + 1, -'.webp'.length)
+      if (/^[0-9]+$/.test(ancho) && !ANCHOS.includes(Number(ancho))) {
+        await rm(join(destino, existente))
+        console.log(`${existente.padEnd(34)} (ancho en desuso: borrada)`)
+      }
+    }
 
     for (const ancho of ANCHOS) {
       const alto = Math.round(ancho / PROPORCION)

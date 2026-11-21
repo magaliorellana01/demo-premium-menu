@@ -5,8 +5,9 @@
 -- Se ejecuta DESPUÉS de schema.sql y se puede volver a correr sin problemas.
 --
 -- Las imágenes viven en public/locales/aroma/ (las sirve la propia app). En
--- imagen_url se guarda la versión de 800 px; la de 480 px se deduce por el
--- nombre (ver src/lib/imagenes.js).
+-- imagen_url se guarda la versión de 480 px; la de 240 px se deduce por el
+-- nombre (ver src/lib/imagenes.js). (Antes se guardaba la de 800 px: la base
+-- que ya corrió esa versión se migra con 04-imagenes-480.sql.)
 -- =====================================================================
 
 -- Logo del local (versión para fondo claro)
@@ -37,7 +38,7 @@ with imagenes (nombre, archivo) as (
     ('Licuado verde',                  'verde')
 )
 update public.productos p
-set imagen_url = '/locales/aroma/productos/' || i.archivo || '-800.webp'
+set imagen_url = '/locales/aroma/productos/' || i.archivo || '-480.webp'
 from imagenes i, public.locales l
 where l.slug = 'aroma'
   and p.local_id = l.id

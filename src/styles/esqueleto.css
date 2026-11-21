@@ -1,0 +1,68 @@
+/* Esqueleto de carga: usa las mismas clases y medidas que el menú real. */
+
+.esq,
+.esqueleto .tarjeta__imagen {
+  background: color-mix(in srgb, var(--color-arena) 32%, var(--color-fondo));
+  border-radius: var(--radio-sm);
+}
+
+.esq--logo {
+  width: min(17rem, 72vw);
+  aspect-ratio: 560 / 111; /* mismas proporciones que el logo */
+  margin-inline: auto;
+}
+
+.esq--linea {
+  height: 1.1em;
+  margin-top: var(--espacio-3);
+}
+
+.esq--centrada {
+  margin-inline: auto;
+}
+
+.esq--corta {
+  width: 55%;
+  max-width: 14rem;
+}
+
+.esq--titulo {
+  width: 9rem;
+  height: 1.75rem;
+}
+
+.esq--seccion {
+  margin-bottom: var(--espacio-5);
+}
+
+.esq--nombre {
+  width: 62%;
+  height: 1.5rem;
+}
+
+.esq--precio {
+  width: 3rem;
+  height: 1.1rem;
+}
+
+.esq-nav {
+  position: static; /* en la carga no hace falta que sea fija */
+}
+
+/* Las líneas de la encabezado van más separadas que las del texto de tarjeta */
+.esqueleto .encabezado .esq--linea:first-of-type {
+  margin-top: var(--espacio-5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .esqueleto .esq,
+  .esqueleto .tarjeta__imagen {
+    animation: esq-pulso 1.6s ease-in-out infinite;
+  }
+
+  @keyframes esq-pulso {
+    50% {
+      opacity: 0.55;
+    }
+  }
+}

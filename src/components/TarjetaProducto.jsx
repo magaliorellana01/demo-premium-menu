@@ -1,3 +1,4 @@
+import { etiquetasDeProducto } from '../lib/etiquetas'
 import { formatearPrecio } from '../lib/formato'
 import { imagenProducto, PROPORCION_PRODUCTO } from '../lib/imagenes'
 import { useAparecer } from '../lib/useAparecer'
@@ -13,7 +14,7 @@ const TAMANOS_COMPACTA = '(min-width: 768px) 11rem, 8rem'
 export default function TarjetaProducto({ producto, compacta = false, prioridad = false }) {
   const ref = useAparecer()
   const imagen = imagenProducto(producto.imagen_url)
-  const etiquetas = producto.etiquetas ?? []
+  const etiquetas = etiquetasDeProducto(producto)
 
   const clases = ['tarjeta']
   if (compacta) clases.push('tarjeta--compacta')
@@ -51,8 +52,8 @@ export default function TarjetaProducto({ producto, compacta = false, prioridad 
         {!compacta && etiquetas.length > 0 && (
           <ul className="etiquetas" aria-label="Etiquetas" role="list">
             {etiquetas.map((etiqueta) => (
-              <li key={etiqueta} className="etiqueta">
-                {etiqueta}
+              <li key={etiqueta.clave} className={`etiqueta etiqueta--${etiqueta.tono}`}>
+                {etiqueta.nombre}
               </li>
             ))}
           </ul>

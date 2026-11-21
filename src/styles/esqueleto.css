@@ -71,6 +71,10 @@
   position: static; /* en la carga no hace falta que sea fija */
 }
 
+.esq-campo {
+  border-radius: var(--radio-md); /* el alto lo da .busqueda__campo, igual que el campo real */
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .esqueleto .esq,
   .esqueleto .tarjeta__imagen {

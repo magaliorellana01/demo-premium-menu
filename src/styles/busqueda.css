@@ -1,0 +1,195 @@
+/* Buscador, filtros por etiqueta, recuento y estado vacío. */
+
+.busqueda {
+  padding-top: var(--espacio-5);
+}
+
+.busqueda__interior {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding-inline: var(--espacio-4);
+}
+
+/* ── Campo de búsqueda (16 px o más: el iPhone no hace zoom al enfocarlo) ── */
+.busqueda__campo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 3rem;
+}
+
+.busqueda__lupa {
+  position: absolute;
+  left: var(--espacio-3);
+  color: var(--color-texto-suave);
+  pointer-events: none;
+}
+
+.busqueda__entrada {
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--alto-toque) 0 2.75rem; /* lugar para la lupa y para el botón de borrar */
+  border: 1px solid color-mix(in srgb, var(--color-texto) 55%, var(--color-fondo));
+  border-radius: var(--radio-md);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: max(16px, 1rem);
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.busqueda__entrada::placeholder {
+  color: var(--color-texto-suave);
+  opacity: 1;
+}
+
+/* El botón de borrar es propio: se oculta el nativo de los navegadores */
+.busqueda__entrada::-webkit-search-cancel-button,
+.busqueda__entrada::-webkit-search-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.busqueda__borrar {
+  position: absolute;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: var(--alto-toque);
+  height: var(--alto-toque);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-md);
+  background: transparent;
+  color: var(--color-texto-suave);
+  cursor: pointer;
+}
+
+.busqueda__borrar:hover {
+  background: var(--color-fondo-suave);
+  color: var(--color-texto);
+}
+
+/* ── Filtros: una fila que se desliza, sin barra visible ───────── */
+/* El relleno de 4 px deja espacio al contorno del foco (el scroll lo recortaría) */
+.filtros {
+  display: flex;
+  gap: var(--espacio-2);
+  min-height: calc(var(--alto-toque) + 8px);
+  margin: calc(var(--espacio-3) - 4px) calc(-1 * var(--espacio-4)) -4px;
+  padding: 4px var(--espacio-4);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.filtros::-webkit-scrollbar {
+  display: none;
+}
+
+.filtro {
+  flex: none;
+  height: var(--alto-toque);
+  padding: 0 var(--espacio-4);
+  border: 1px solid color-mix(in srgb, var(--color-texto) 55%, var(--color-fondo));
+  border-radius: var(--radio-pildora);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  font: inherit;
+  font-size: var(--texto-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.filtro:hover {
+  background: var(--color-fondo-suave);
+}
+
+/* Activo: se invierten los colores (no depende solo del tono) */
+.filtro[aria-pressed='true'] {
+  border-color: var(--color-texto);
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
+/* ── Recuento y "Limpiar filtros" ─────────────────────────────── */
+.busqueda__estado {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: var(--alto-toque); /* siempre ocupa lo mismo: nada se mueve al filtrar */
+}
+
+.busqueda__recuento {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-suave);
+}
+
+.busqueda__limpiar {
+  min-height: var(--alto-toque);
+  padding: 0 var(--espacio-2);
+  border: 0;
+  background: none;
+  color: var(--color-acento-texto);
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+/* ── Sin resultados ─────────────────────────────────────────── */
+.vacio {
+  display: grid;
+  justify-items: start;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-6);
+  padding: var(--espacio-6) 0;
+  border-block: 1px solid var(--color-borde);
+}
+
+.vacio__titulo {
+  font-family: var(--fuente-titulos);
+  font-style: italic;
+  font-size: var(--texto-xl);
+  line-height: var(--interlineado-titulos);
+}
+
+.vacio__texto {
+  color: var(--color-texto-suave);
+}
+
+/* ── Nota final ─────────────────────────────────────────────── */
+.nota-alergias {
+  margin-top: var(--espacio-7);
+  padding-top: var(--espacio-4);
+  border-top: 1px solid color-mix(in srgb, var(--color-borde) 45%, var(--color-fondo));
+  font-size: var(--texto-sm);
+  color: var(--color-texto-suave);
+}
+
+@media (min-width: 640px) {
+  .busqueda__interior {
+    padding-inline: var(--espacio-5);
+  }
+
+  .filtros {
+    margin-inline: calc(-1 * var(--espacio-5));
+    padding-inline: var(--espacio-5);
+  }
+}
+
+@media (min-width: 1024px) {
+  .busqueda__interior {
+    padding-inline: var(--espacio-6);
+  }
+
+  /* Alineada con el contenedor; 4 px de relleno para el contorno del foco */
+  .filtros {
+    margin-inline: -4px;
+    padding-inline: 4px;
+  }
+}

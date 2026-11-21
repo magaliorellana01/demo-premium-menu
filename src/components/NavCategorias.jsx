@@ -6,7 +6,9 @@ import { useCategoriaActiva } from '../lib/useCategoriaActiva'
 // "Visitanos"): items = [{ id, nombre }]. Son enlaces normales a #id: funcionan
 // aunque falle el JavaScript; el scroll suave y el scroll-margin-top los
 // resuelve el CSS.
-export default function NavCategorias({ items }) {
+// `mantener`: la barra se queda (aunque filtrando sobren menos de dos secciones) para que
+// el buscador que tiene debajo no se mueva de lugar.
+export default function NavCategorias({ items, mantener = false }) {
   const ids = items.map((item) => item.id)
   const [activa, setActiva] = useCategoriaActiva(ids)
   const listaRef = useRef(null)
@@ -20,7 +22,7 @@ export default function NavCategorias({ items }) {
     lista.scrollTo({ left: izquierda, behavior: comportamientoScroll() })
   }, [activa])
 
-  if (items.length < 2) return null
+  if (items.length < 2 && !mantener) return null
 
   return (
     <nav className="nav" aria-label="Secciones del menú">

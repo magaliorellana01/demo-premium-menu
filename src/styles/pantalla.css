@@ -1,0 +1,83 @@
+/* Botones y pantallas de aviso con la marca ("local no encontrado", error de carga). */
+
+/* ── Botón (también sirve para enlaces con aspecto de botón) ────── */
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-toque);
+  padding: 0 var(--espacio-5);
+  border: 1px solid transparent;
+  border-radius: var(--radio-pildora);
+  font: inherit;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Sobre fondo oscuro: cobre con texto espresso (4,7:1) */
+.boton--acento {
+  background: var(--color-acento);
+  color: var(--color-sobre-acento);
+}
+
+.boton--acento:hover {
+  background: var(--color-sobre-oscuro);
+}
+
+/* Sobre fondo claro: espresso con texto porcelana */
+.boton--oscuro {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
+.boton--oscuro:hover {
+  background: var(--color-acento-texto);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .boton {
+    transition: background-color var(--duracion-corta) ease;
+  }
+}
+
+/* ── Pantalla de aviso ──────────────────────────────────────────── */
+.pantalla {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: var(--espacio-4);
+  min-height: 82vh;
+  min-height: 82svh;
+  padding: var(--espacio-7) var(--espacio-4);
+  text-align: center;
+}
+
+.pantalla__logo {
+  display: block;
+  width: min(14rem, 60vw);
+  height: auto;
+  margin-bottom: var(--espacio-3);
+}
+
+.pantalla__titulo {
+  font-size: var(--texto-xl);
+}
+
+.pantalla__texto {
+  max-width: 28rem;
+  color: var(--color-texto-suave);
+}
+
+.pantalla .boton {
+  margin-top: var(--espacio-3);
+}
+
+@media (min-width: 640px) {
+  .pantalla__titulo {
+    font-size: var(--texto-2xl);
+  }
+}

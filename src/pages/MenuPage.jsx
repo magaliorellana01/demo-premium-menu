@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import Destacados from '../components/Destacados'
-import Encabezado from '../components/Encabezado'
 import Esqueleto from '../components/Esqueleto'
 import NavCategorias from '../components/NavCategorias'
+import PantallaMensaje from '../components/PantallaMensaje'
 import Pie from '../components/Pie'
+import Portada from '../components/Portada'
 import SeccionCategoria from '../components/SeccionCategoria'
+import { idCategoria } from '../lib/formato'
 import { useLocal } from '../lib/useLocal'
 import NoEncontrado from './NoEncontrado'
 
@@ -22,10 +24,12 @@ export default function MenuPage() {
   if (cargando) return <Esqueleto />
   if (error) {
     return (
-      <main className="contenedor estado">
-        <h1>No pudimos cargar el menú</h1>
-        <p>Probá recargar la página en unos minutos.</p>
-      </main>
+      <PantallaMensaje titulo="No pudimos cargar el menú">
+        <p className="pantalla__texto">Parece un problema de conexión. Probá de nuevo en unos instantes.</p>
+        <button type="button" className="boton boton--oscuro" onClick={() => window.location.reload()}>
+          Reintentar
+        </button>
+      </PantallaMensaje>
     )
   }
   if (!local) return <NoEncontrado />
@@ -33,9 +37,12 @@ export default function MenuPage() {
   const categorias = local.categorias.filter((categoria) => categoria.productos.length > 0)
   const destacados = categorias.flatMap((categoria) => categoria.productos.filter((producto) => producto.destacado))
 
+  // El botón de la portada baja a la primera sección: los destacados o, si no hay, la primera categoría.
+  const destino = destacados.length > 0 ? 'destacados' : categorias[0] && idCategoria(categorias[0])
+
   return (
     <>
-      <Encabezado local={local} />
+      <Portada local={local} destino={destino} />
       <NavCategorias categorias={categorias} />
       <main>
         <Destacados productos={destacados} />

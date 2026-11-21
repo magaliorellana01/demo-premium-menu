@@ -1,13 +1,16 @@
-import Pie from '../components/Pie'
+import { Link } from 'react-router-dom'
+import PantallaMensaje from '../components/PantallaMensaje'
+import { MARCA_DEMO } from '../lib/demo'
 
 export default function NoEncontrado() {
   return (
-    <>
-      <main className="contenedor">
-        <h1>Local no encontrado</h1>
-        <p>No encontramos el menú que buscás. Revisá que el link o el QR sean correctos.</p>
-      </main>
-      <Pie />
-    </>
+    <PantallaMensaje titulo="No encontramos este menú">
+      <p className="pantalla__texto">
+        Puede que el link o el código QR estén incompletos. Revisá la dirección o volvé a escanear el código del local.
+      </p>
+      <Link className="boton boton--oscuro" to={`/${MARCA_DEMO.slug}`}>
+        Ir al menú de {MARCA_DEMO.nombre}
+      </Link>
+    </PantallaMensaje>
   )
 }

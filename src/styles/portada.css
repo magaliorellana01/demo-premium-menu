@@ -1,0 +1,173 @@
+/* Portada tipográfica sobre espresso + granos de café que caen (solo acá). */
+
+.portada {
+  --alto-portada: min(75svh, 46rem);
+
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  min-height: 75vh; /* respaldo */
+  min-height: var(--alto-portada);
+  padding: var(--espacio-8) var(--espacio-4) var(--espacio-7);
+  overflow: hidden;
+  background: var(--color-superficie-oscura);
+  color: var(--color-sobre-oscuro);
+  text-align: center;
+}
+
+/* El foco tiene que verse sobre el espresso */
+.portada :focus-visible {
+  outline-color: var(--color-sobre-oscuro);
+}
+
+.portada__contenido {
+  position: relative;
+  z-index: 1; /* por encima de los granos */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--espacio-3);
+  max-width: 34rem;
+}
+
+.portada__titulo {
+  margin-bottom: var(--espacio-3);
+  font-size: var(--texto-2xl);
+}
+
+.portada__logo {
+  display: block;
+  width: min(19rem, 76vw);
+  height: auto;
+}
+
+.portada__frase {
+  font-family: var(--fuente-titulos);
+  font-style: italic;
+  font-size: var(--texto-xl);
+  line-height: 1.2;
+  color: var(--color-acento);
+}
+
+.portada__descripcion {
+  max-width: 26rem;
+  color: var(--color-sobre-oscuro-suave);
+}
+
+.portada .boton {
+  margin-top: var(--espacio-4);
+}
+
+/* ── Entrada escalonada: logo, frase, descripción y botón ───────── */
+@keyframes portada-entra {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .portada__entra {
+    animation: portada-entra 0.8s var(--easing) both;
+    animation-delay: var(--retraso, 0s);
+  }
+}
+
+/* ── Granos de café ─────────────────────────────────────────────── */
+/* Decorativos: no reciben clics y quedan detrás del texto. Solo se animan
+   transform y opacity. La animación se pausa cuando la portada sale de
+   pantalla (data-activa, ver usePausarFueraDePantalla). */
+.granos {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.granos__simbolo {
+  position: absolute;
+}
+
+.granos__grano {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  width: var(--tam);
+  aspect-ratio: 2 / 3;
+  opacity: 0;
+  will-change: transform, opacity;
+  animation: granos-caer var(--dur) linear var(--ret) infinite;
+}
+
+.granos__grano svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.granos__grano--cobre {
+  color: var(--color-cobre);
+}
+
+.granos__grano--arena {
+  color: var(--color-arena);
+}
+
+/* La ranura del grano toma el color del fondo */
+.granos__ranura {
+  stroke: var(--color-superficie-oscura);
+}
+
+.portada[data-activa='false'] .granos__grano {
+  animation-play-state: paused;
+}
+
+@keyframes granos-caer {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -3rem, 0) rotate(var(--g0));
+  }
+
+  8%,
+  88% {
+    opacity: var(--opacidad);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--deriva), calc(var(--alto-portada) + 3rem), 0) rotate(var(--g1));
+  }
+}
+
+/* Movimiento reducido: sin animación; quedan 6 granos quietos y muy tenues */
+@media (prefers-reduced-motion: reduce) {
+  .granos__grano {
+    top: var(--y);
+    opacity: var(--opacidad);
+    transform: rotate(var(--g0));
+    animation: none;
+    will-change: auto;
+  }
+
+  /* el primer hijo es el <svg> con el símbolo; los granos son del 2.º en adelante */
+  .granos__grano:nth-child(n + 8) {
+    display: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .portada__frase {
+    font-size: var(--texto-2xl);
+  }
+
+  .portada__descripcion {
+    font-size: var(--texto-lg);
+  }
+}

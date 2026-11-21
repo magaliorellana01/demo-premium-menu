@@ -1,5 +1,7 @@
 @import './fuentes.css';
 @import './tokens.css';
 @import './base.css';
+@import './pantalla.css';
+@import './portada.css';
 @import './menu.css';
 @import './esqueleto.css';

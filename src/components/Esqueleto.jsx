@@ -1,5 +1,5 @@
 // Esqueleto de carga: reutiliza las clases del menú real para ocupar el mismo
-// espacio (encabezado, barra, fila de destacados y tarjetas) y evitar saltos.
+// espacio (portada, barra, fila de destacados y tarjetas) y evitar saltos.
 function TarjetaVacia({ compacta = false }) {
   return (
     <li className={`tarjeta esq-tarjeta${compacta ? ' tarjeta--compacta' : ''}`}>
@@ -23,10 +23,13 @@ export default function Esqueleto() {
       </p>
 
       <div aria-hidden="true">
-        <div className="encabezado">
-          <div className="esq esq--logo" />
-          <div className="esq esq--linea esq--centrada" />
-          <div className="esq esq--linea esq--corta esq--centrada" />
+        <div className="portada portada--esqueleto">
+          <div className="portada__contenido">
+            <div className="esq esq--logo" />
+            <div className="esq esq--frase" />
+            <div className="esq esq--descripcion" />
+            <div className="esq esq--boton" />
+          </div>
         </div>
 
         <div className="nav esq-nav" />

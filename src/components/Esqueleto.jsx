@@ -35,6 +35,14 @@ export default function Esqueleto() {
 
         <div className="nav esq-nav" />
 
+        <div className="busqueda">
+          <div className="busqueda__interior">
+            <div className="busqueda__campo esq esq-campo" />
+            <div className="filtros" />
+            <div className="busqueda__estado" />
+          </div>
+        </div>
+
         <div className="destacados">
           <div className="destacados__interior">
             <div className="destacados__cabecera">

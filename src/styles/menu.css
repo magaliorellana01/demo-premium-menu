@@ -253,17 +253,40 @@
   list-style: none;
 }
 
+/* Chip con el texto de la etiqueta (el color acompaña, no reemplaza). Texto espresso en
+   todos: sobre cada fondo da más de 4,5:1. */
 .etiqueta {
   padding: 0.1rem var(--espacio-3);
   border: 1px solid var(--color-secundario);
   border-radius: var(--radio-pildora);
   background: color-mix(in srgb, var(--color-secundario) 12%, var(--color-fondo));
+  color: var(--color-texto);
   font-size: var(--texto-xs);
   line-height: 1.5;
 }
 
 .etiqueta::first-letter {
   text-transform: uppercase;
+}
+
+/* Picante: cobre suave */
+.etiqueta--picante {
+  border-color: var(--color-cobre-texto);
+  background: color-mix(in srgb, var(--color-acento) 14%, var(--color-fondo));
+}
+
+/* Nuevo: cobre lleno, el único chip con relleno fuerte */
+.etiqueta--nuevo {
+  border-color: var(--color-acento);
+  background: var(--color-acento);
+  color: var(--color-sobre-acento);
+  font-weight: var(--peso-fuerte);
+}
+
+/* Etiqueta fuera del vocabulario: neutra, en arena */
+.etiqueta--neutra {
+  border-color: var(--color-borde);
+  background: var(--color-fondo-suave);
 }
 
 /* No disponible: la imagen se atenúa y la leyenda queda siempre en texto legible */

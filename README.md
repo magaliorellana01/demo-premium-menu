@@ -60,7 +60,11 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
    ficticios de Aroma (horarios, dirección, WhatsApp, Instagram). Se puede correr más de una vez. **Antes de mostrarlo,
    reemplazar** el WhatsApp (`TODO 00000000000`) y el Instagram (`TODO-reemplazar-instagram`) por los reales: el archivo trae
    el bloque comentado para hacerlo. Los permisos no cambian (la anon ya lee `locales` por tabla).
-10. `npm run dev` y abrir `/aroma`.
+10. Pegar y correr `supabase/06-etiquetas.sql`: carga etiquetas de ejemplo (vegano, vegetariano, sin TACC, sin lactosa, nuevo) en
+    los 18 productos de Aroma. Se puede correr más de una vez (cada corrida deja las etiquetas como figuran en el archivo) y no
+    cambia el esquema ni los permisos. Al final devuelve una fila de control (`productos = 18`, `con_etiquetas = 18`) y el
+    recuento por etiqueta. Sin este paso el menú funciona igual, solo que sin chips de filtro.
+11. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -96,7 +100,7 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs   Pruebas de la lógica de horarios y de enlaces (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs   Pruebas de horarios, enlaces y búsqueda/filtros (npm run probar)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
@@ -105,18 +109,20 @@ scripts/
 src/
   lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
                         useCategoriaActiva.js, useAparecer.js, usePausarFueraDePantalla.js, movimiento.js, demo.js,
-                        horarios.js (puro), contacto.js (enlaces seguros), visita.js, useAhora.js (reloj por minuto)
-  components/           Portada, Granos, EstadoLocal, Aviso, NavCategorias, Destacados, SeccionCategoria, TarjetaProducto,
-                        Visitanos, PantallaMensaje, Esqueleto y Pie
+                        horarios.js (puro), contacto.js (enlaces seguros), visita.js, useAhora.js (reloj por minuto),
+                        etiquetas.js (vocabulario, reutilizable en el panel), filtros.js (búsqueda y filtros, puro), useFiltros.js
+  components/           Carta (arma la página), Portada, Granos, EstadoLocal, Aviso, NavCategorias, Busqueda, Destacados,
+                        SeccionCategoria, TarjetaProducto, Visitanos, PantallaMensaje, Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
   admin/                Panel de administración (más adelante)
-  styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, esqueleto.css
+  styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, busqueda.css, visitanos.css, esqueleto.css
 supabase/
   schema.sql            Tablas, índices, RLS, políticas, bucket y datos de ejemplo
   02-imagenes.sql       Logo, imágenes y destacados del local aroma (se corre después de schema.sql)
   03-frase.sql          Frase de tono del encabezado (tema.frase)
   04-imagenes-480.sql   Migra imagen_url de la versión de 800 px a la de 480 px
   05-info-aviso.sql     Columnas del aviso y datos de contacto/horarios de ejemplo
+  06-etiquetas.sql      Etiquetas de ejemplo en los productos de aroma
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -198,6 +204,35 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
 
 `npm run probar` corre las pruebas de `src/lib/horarios.js` y `src/lib/contacto.js` (con distintas zonas, cierres, cruces
 de medianoche y cambios de día).
+
+## Etiquetas, buscador y filtros
+
+- **Vocabulario:** `src/lib/etiquetas.js` define las etiquetas estándar, en este orden: Vegano, Vegetariano, Sin TACC, Sin lactosa,
+  Picante y Nuevo (cada una con `clave`, `nombre`, `descripcion` corta y `tono`). Está pensado para que el panel de administración
+  lo reutilice en el selector de etiquetas. En la base se guarda la **clave** en `productos.etiquetas` (`vegano`, `sin-tacc`...);
+  "Sin TACC", "sin tacc" y "sin-tacc" se tratan como la misma.
+- **Etiquetas fuera del vocabulario:** se muestran igual, como texto simple (chip neutro, con la primera letra en mayúscula), y
+  también se pueden filtrar. Aparecen después de las del vocabulario.
+- **Tarjetas:** cada etiqueta es un chip con su texto (nunca solo color ni solo ícono): salvia para las dietéticas, cobre suave para
+  "Picante", cobre lleno para "Nuevo" y arena para las ajenas. Los destacados (tarjeta vertical) no muestran etiquetas.
+- **Buscador** (`role="search"`, entre la barra de categorías y los destacados): busca en nombre, descripción y etiquetas, sin
+  distinguir mayúsculas ni tildes (normalización NFD). Con varias palabras, el producto debe contenerlas todas. Espera 150 ms
+  desde la última letra, tiene texto de 16 px (el iPhone no hace zoom), botón para borrar y se limpia con Escape.
+- **Filtros:** una fila de chips (botones con `aria-pressed`, 44 px de alto) con **solo** las etiquetas que existen en los productos
+  del local, en el orden del vocabulario. Se combinan: el producto tiene que cumplir **todas** las elegidas. En celular la fila se
+  desliza sin barra visible.
+- **Resultados:** se filtran las tarjetas de cada categoría y las categorías vacías desaparecen de la lista y de la barra (la barra
+  sigue marcando la categoría que se está leyendo). Mientras hay búsqueda o filtros, **los destacados se ocultan** (los resultados ya
+  muestran esos productos en su categoría). Los productos "No disponible" también se filtran y se ven atenuados. Un texto con
+  `aria-live="polite"` anuncia la cantidad ("7 productos") y, si no hay coincidencias, aparece un estado vacío con el botón
+  "Limpiar filtros". El buscador no se mueve de lugar al filtrar (el recuento y la fila de chips reservan su alto).
+- **Enlace compartible:** la búsqueda y los filtros se reflejan en la URL con `history.replaceState` (sin llenar el historial):
+  `/aroma?q=licuado&etiquetas=vegano,sin-tacc`. Al abrir ese enlace se restauran. Las etiquetas que el local no tiene se ignoran.
+- **Alergias:** al final de la carta figura "Ante alergias o intolerancias, consultá al personal." **Las etiquetas las carga cada
+  local y son su responsabilidad**: la demo y la plataforma no verifican ingredientes ni alérgenos, y las etiquetas de Aroma son
+  solo de ejemplo.
+- Limitación conocida: el esqueleto de carga reserva siempre el lugar de la fila de chips; un local que no tenga ninguna etiqueta
+  verá un pequeño salto al cargar, porque esa fila no se muestra.
 
 ## Medir el rendimiento (Lighthouse)
 

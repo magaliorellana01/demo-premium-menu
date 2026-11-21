@@ -7,7 +7,7 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 - Menú público: `/:slug` (ej. `/aroma`)
 - Panel de administración: `/admin` (se construye en la Tarea 4)
 
-Estado: **Tarea 1** (base, marca y Supabase). El menú muestra una vista provisoria; el diseño final viene en la Tarea 3.
+Estado: **Tarea 2** (menú público: estructura, logo e imágenes). La navegación por categorías, el pulido visual y el resto del diseño vienen en la Tarea 3.
 
 ## Cómo correrlo
 
@@ -18,10 +18,10 @@ npm run dev
 ```
 
 Abrir http://localhost:5173/aroma. Otros comandos: `npm run build` (genera `dist/`), `npm run preview`,
-`npm run lint` y `npm run verificar:rls`.
+`npm run lint`, `npm run verificar:rls` y `npm run imagenes`.
 
 Antes de la primera vez hay que crear el proyecto de Supabase y pegar `supabase/schema.sql`
-en el SQL Editor (paso a paso más abajo).
+y después `supabase/02-imagenes.sql` en el SQL Editor (paso a paso más abajo).
 
 ## Variables de entorno
 
@@ -47,7 +47,10 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
 4. Ir a **Project Settings > API** (o el botón **Connect**) y copiar la **Project URL** y la clave **anon**
    (o "publishable"). No copiar la `service_role`.
 5. Pegarlas en `.env` (copia de `.env.example`).
-6. `npm run dev` y abrir `/aroma`.
+6. En **SQL Editor > New query**, pegar y correr `supabase/02-imagenes.sql`: carga el logo y las imágenes de los
+   productos y marca los destacados. Se puede correr más de una vez. Al final devuelve una fila de control
+   (18 productos, 18 con imagen, 5 destacados).
+7. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -75,17 +78,21 @@ curl -X POST "$URL/rest/v1/productos" -H "apikey: $ANON" -H "Authorization: Bear
 ```
 public/
   fonts/                Fuentes autoalojadas (woff2) y sus licencias
+  locales/aroma/        Logo e imágenes optimizadas del local (productos/<nombre>-480.webp y -800.webp)
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
+  optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
+  aroma-imagenes.json   Renombres de las fotos de Aroma
 src/
-  lib/                  supabase.js (cliente), locales.js (getLocal), formato.js, useLocal.js
-  components/           Componentes de interfaz (el diseño llega en la Tarea 3)
+  lib/                  supabase.js (cliente), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js
+  components/           Encabezado, Destacados, SeccionCategoria, TarjetaProducto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
   admin/                Panel de administración (Tarea 4)
-  styles/               tokens.css (marca), fuentes.css, base.css
+  styles/               tokens.css (marca), fuentes.css, base.css, menu.css
 supabase/
   schema.sql            Tablas, índices, RLS, políticas, bucket y datos de ejemplo
+  02-imagenes.sql       Logo, imágenes y destacados del local aroma (se corre después de schema.sql)
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -99,6 +106,28 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
   asignar usuarios es solo de admins.
 - Storage: bucket público `imagenes` (webp, jpeg y png, máx. 2 MB). Cada local sube solo a su carpeta `<local_id>/...`.
 - El slug `admin` está reservado para el panel.
+
+## Optimizar imágenes (logos y fotos de productos)
+
+`scripts/optimizar-imagenes.mjs` toma el material de origen (`brand/`) y deja las versiones livianas en `public/`.
+Usa [sharp](https://sharp.pixelplumbing.com/) (devDependency), así que alcanza con `npm install`. Se corre con
+`npm run imagenes` (los argumentos van después de `--`):
+
+```
+# Fotos de productos: recorte 4:5, WebP en 480 y 800 px, apuntando a 60 KB o menos
+npm run imagenes -- productos brand public/locales/aroma/productos --config scripts/aroma-imagenes.json
+
+# Logos: recorta el margen vacío (logo, logo-claro y logo-completo)
+npm run imagenes -- logo brand public/locales/aroma
+```
+
+Las fotos de origen ya vienen en WebP: el script solo las recorta, las achica y las recomprime.
+Se renombran con `--config` (un JSON con `renombres` y, si un recorte corta el producto, `encuadre`
+con el foco `[x, y]` de 0 a 1). Para otro local: copiar el JSON, ajustar los nombres y cambiar las carpetas.
+Si una imagen no llega al objetivo sin perder calidad (mínimo q62), el script lo avisa en lugar de degradarla.
+
+En la base, `imagen_url` guarda la versión de 800 px (`.../espresso-800.webp`) y `src/lib/imagenes.js` deduce la de 480 px
+para el `srcset`. Una imagen que no siga ese nombre se usa tal cual.
 
 ## Marca
 

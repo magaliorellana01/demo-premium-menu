@@ -1,0 +1,196 @@
+/* Menú público. Todo sale de los tokens de marca (tokens.css). */
+
+.estado {
+  padding-block: var(--espacio-7);
+}
+
+/* ── Encabezado ─────────────────────────────────────────────────── */
+.encabezado {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding: var(--espacio-7) var(--espacio-4) var(--espacio-5);
+  text-align: center;
+}
+
+.encabezado__titulo {
+  font-size: var(--texto-2xl);
+}
+
+.encabezado__logo {
+  display: block;
+  width: min(14rem, 62vw);
+  height: auto;
+  margin-inline: auto;
+}
+
+.encabezado__descripcion {
+  max-width: 32rem;
+  margin: var(--espacio-4) auto 0;
+  color: var(--color-texto-suave);
+}
+
+/* ── Contenido ──────────────────────────────────────────────────── */
+.menu {
+  max-width: var(--ancho-max);
+  margin: 0 auto;
+  padding: 0 var(--espacio-4) var(--espacio-6);
+}
+
+.seccion {
+  margin-top: var(--espacio-7);
+}
+
+.seccion__titulo {
+  padding-bottom: var(--espacio-3);
+  margin-bottom: var(--espacio-5);
+  border-bottom: 1px solid var(--color-borde);
+  font-size: var(--texto-xl);
+}
+
+/* Una columna en celular, dos en tablet y tres en pantallas grandes */
+.grilla {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--espacio-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* ── Tarjeta de producto ────────────────────────────────────────── */
+/* Celular: horizontal (miniatura + texto), para recorrer la carta sin scroll infinito. */
+.tarjeta {
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: var(--espacio-4);
+  align-items: start;
+}
+
+/* Sin imagen, el texto ocupa todo el ancho */
+.tarjeta:not(:has(.tarjeta__imagen)) {
+  grid-template-columns: 1fr;
+}
+
+.tarjeta__imagen {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  border-radius: var(--radio-md);
+  background: var(--color-fondo-suave); /* se ve mientras la imagen carga */
+}
+
+.tarjeta__imagen img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tarjeta__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-2);
+  min-width: 0;
+}
+
+.tarjeta__nombre {
+  font-size: var(--texto-lg);
+}
+
+.tarjeta__descripcion {
+  font-size: var(--texto-sm);
+  color: var(--color-texto-suave);
+}
+
+.tarjeta__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espacio-2) var(--espacio-3);
+  margin-top: auto;
+  padding-top: var(--espacio-1);
+}
+
+.tarjeta__precio {
+  font-weight: var(--peso-fuerte);
+}
+
+.tarjeta__aviso {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-texto-suave);
+}
+
+/* Etiquetas */
+.etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.etiqueta {
+  padding: 0.1rem var(--espacio-3);
+  border: 1px solid var(--color-secundario);
+  border-radius: var(--radio-pildora);
+  background: color-mix(in srgb, var(--color-secundario) 12%, var(--color-fondo));
+  font-size: var(--texto-xs);
+  line-height: 1.5;
+}
+
+.etiqueta::first-letter {
+  text-transform: uppercase;
+}
+
+/* No disponible: la imagen se atenúa y la leyenda queda siempre en texto legible */
+.tarjeta--no-disponible .tarjeta__imagen img {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+.tarjeta--no-disponible .tarjeta__nombre,
+.tarjeta--no-disponible .tarjeta__precio {
+  color: var(--color-texto-suave);
+}
+
+/* Destacada: vertical en todos los tamaños */
+.tarjeta--destacada {
+  grid-template-columns: 1fr;
+}
+
+/* ── Pantallas más grandes ──────────────────────────────────────── */
+@media (min-width: 640px) {
+  .encabezado,
+  .menu {
+    padding-inline: var(--espacio-5);
+  }
+
+  .grilla {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--espacio-6) var(--espacio-5);
+  }
+
+  /* Desde acá todas las tarjetas son verticales */
+  .tarjeta {
+    grid-template-columns: 1fr;
+    gap: var(--espacio-3);
+  }
+
+  .seccion__titulo {
+    font-size: var(--texto-2xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .encabezado,
+  .menu {
+    padding-inline: var(--espacio-6);
+  }
+
+  .grilla {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

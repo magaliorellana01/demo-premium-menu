@@ -1,0 +1,23 @@
+{
+  "renombres": {
+    "batido-stawberry": "strawberry",
+    "batido-verde": "verde",
+    "capucchino": "capuchino",
+    "cheescake-frutos-rojos": "cheesecake",
+    "moccha-chocolate": "moca",
+    "mango": "mango-maracuya",
+    "watermelon-lemon-mint": "sandia",
+    "croissant-relleno": "croissant-chocolate",
+    "jugo-naranja": "naranja",
+    "latte-artesanal": "latte-artesanal",
+    "latte-vaso": "latte-vaso",
+    "limonada-menta": "limonada",
+    "tarta-frutal": "tartaleta",
+    "torta-ganache": "torta-chocolate",
+    "carrot-cake": "carrot-cake",
+    "cafe-frio": "cafe-frio",
+    "croissant": "croissant",
+    "espresso": "espresso"
+  },
+  "encuadre": {}
+}

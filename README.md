@@ -56,7 +56,11 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
 8. Pegar y correr `supabase/04-imagenes-480.sql`: pasa `imagen_url` de la versión de 800 px a la de 480 px (las de 800 px
    ya no existen). Se puede correr más de una vez; si el `02` ya se corrió con 800 px, este paso es obligatorio. Al final devuelve
    una fila de control (`quedan_800 = 0`, `con_480 = 18`, `productos = 18`).
-9. `npm run dev` y abrir `/aroma`.
+9. Pegar y correr `supabase/05-info-aviso.sql`: agrega las columnas del aviso (`aviso_texto`, `aviso_activo`) y carga datos
+   ficticios de Aroma (horarios, dirección, WhatsApp, Instagram). Se puede correr más de una vez. **Antes de mostrarlo,
+   reemplazar** el WhatsApp (`TODO 00000000000`) y el Instagram (`TODO-reemplazar-instagram`) por los reales: el archivo trae
+   el bloque comentado para hacerlo. Los permisos no cambian (la anon ya lee `locales` por tabla).
+10. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -92,6 +96,7 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
+  probar-horarios.mjs, probar-contacto.mjs   Pruebas de la lógica de horarios y de enlaces (npm run probar)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
@@ -99,9 +104,10 @@ scripts/
   fuentes/              Liberation Serif Italic (subconjunto latino, TTF) para escribir la frase en la imagen social
 src/
   lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
-                        useCategoriaActiva.js, useAparecer.js, usePausarFueraDePantalla.js, movimiento.js, demo.js
-  components/           Portada, Granos, NavCategorias, Destacados, SeccionCategoria, TarjetaProducto,
-                        PantallaMensaje, Esqueleto y Pie
+                        useCategoriaActiva.js, useAparecer.js, usePausarFueraDePantalla.js, movimiento.js, demo.js,
+                        horarios.js (puro), contacto.js (enlaces seguros), visita.js, useAhora.js (reloj por minuto)
+  components/           Portada, Granos, EstadoLocal, Aviso, NavCategorias, Destacados, SeccionCategoria, TarjetaProducto,
+                        Visitanos, PantallaMensaje, Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
   admin/                Panel de administración (más adelante)
   styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, esqueleto.css
@@ -110,6 +116,7 @@ supabase/
   02-imagenes.sql       Logo, imágenes y destacados del local aroma (se corre después de schema.sql)
   03-frase.sql          Frase de tono del encabezado (tema.frase)
   04-imagenes-480.sql   Migra imagen_url de la versión de 800 px a la de 480 px
+  05-info-aviso.sql     Columnas del aviso y datos de contacto/horarios de ejemplo
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -153,6 +160,44 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
 - **Movimiento:** la aparición de secciones y tarjetas se desactiva con `prefers-reduced-motion`.
   El contenido nunca queda oculto si falla el JavaScript o el navegador no soporta `IntersectionObserver`.
 - **Frase de tono:** sale de `locales.tema.frase`; cada local puede tener la suya.
+
+## Información del local, horarios y aviso
+
+- **"Abierto ahora":** debajo de la descripción de la portada, en texto ("Abierto ahora · hasta las 20:00", "Cierra pronto · hasta las 20:00",
+  "Cerrado · abre mañana a las 8:00"). Se recalcula cada minuto y al volver a la pestaña. Siempre usa la **zona horaria del local**, no la del
+  dispositivo. Sin horarios válidos, la línea no aparece.
+- **Visitanos:** sección al final de la carta (con enlace en la barra) con los horarios de la semana (hoy resaltado), la dirección
+  y los botones de WhatsApp, Instagram y "Cómo llegar" (se abren en otra pestaña con `rel="noopener noreferrer"`). Lo que falte
+  en la base simplemente no se muestra. Los enlaces se arman en `src/lib/contacto.js` y solo aceptan https.
+- **Aviso:** franja fina arriba de la portada, editable desde la base (`aviso_texto`, hasta 200 caracteres, y `aviso_activo`).
+  Se puede cerrar y el cierre se recuerda solo durante la sesión (`sessionStorage`). No mueve el diseño (CLS 0) y se anuncia
+  con `role="status"`.
+
+### Formato de `locales.horarios` (jsonb)
+
+```json
+{
+  "zona": "America/Argentina/Buenos_Aires",
+  "semana": {
+    "lunes":   [{ "desde": "08:00", "hasta": "13:00" }, { "desde": "16:00", "hasta": "20:00" }],
+    "martes":  [{ "desde": "08:00", "hasta": "20:00" }],
+    "viernes": [{ "desde": "20:00", "hasta": "02:00" }],
+    "domingo": []
+  }
+}
+```
+
+- `zona`: nombre IANA; opcional (por defecto `America/Argentina/Buenos_Aires`).
+- Claves de día sin tildes: `lunes`, `martes`, `miercoles`, `jueves`, `viernes`, `sabado`, `domingo`.
+- Cada día es una lista de tramos `{desde, hasta}` en `HH:MM`: **varios tramos** (corte de mediodía) son varios elementos.
+- **Día cerrado:** lista vacía `[]` o clave ausente.
+- **Cruce de medianoche:** si `hasta` es menor que `desde` (ej. `20:00` a `02:00`), el tramo termina al día siguiente.
+  `"24:00"` también vale como cierre a medianoche.
+- La apertura es inclusiva y el cierre exclusivo (a las 20:00 en punto de un local que cierra a las 20:00, ya figura cerrado).
+- Tramos inválidos se ignoran sin romper el resto; si ninguno sirve, no se muestran horarios.
+
+`npm run probar` corre las pruebas de `src/lib/horarios.js` y `src/lib/contacto.js` (con distintas zonas, cierres, cruces
+de medianoche y cambios de día).
 
 ## Medir el rendimiento (Lighthouse)
 

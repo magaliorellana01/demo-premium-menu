@@ -171,3 +171,81 @@
     font-size: var(--texto-lg);
   }
 }
+
+/* ── Estado del local: "Abierto ahora · hasta las 20:00" ────────── */
+/* Se dice con palabras; el punto solo refuerza: lleno = abierto,
+   cobre = cierra pronto, hueco = cerrado. */
+.estado-local {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: 1.4rem;
+  font-size: var(--texto-sm);
+  color: var(--color-sobre-oscuro);
+}
+
+.estado-local__punto {
+  flex: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 2px solid transparent;
+  border-radius: 50%;
+}
+
+.estado-local--abierto .estado-local__punto {
+  background: color-mix(in srgb, var(--color-salvia) 55%, var(--color-porcelana));
+}
+
+.estado-local--pronto .estado-local__punto {
+  background: var(--color-cobre);
+}
+
+.estado-local--cerrado .estado-local__punto {
+  border-color: var(--color-sobre-oscuro-suave);
+}
+
+/* ── Aviso del local: franja fina sobre el borde superior de la portada ── */
+/* Va superpuesta (no empuja nada): aparecer o cerrarse no mueve el diseño,
+   y la barra de categorías queda más abajo, sin tapar. */
+.aviso {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  min-height: var(--alto-toque);
+  padding-inline: var(--alto-toque) 0; /* el hueco de la izquierda equilibra el botón de cerrar */
+  background: var(--color-acento);
+  color: var(--color-sobre-acento); /* espresso sobre cobre: 4,7:1 */
+  font-size: var(--texto-sm);
+}
+
+.aviso__texto {
+  flex: 1;
+  padding-block: var(--espacio-2);
+  line-height: 1.35;
+  text-align: center;
+}
+
+.aviso__cerrar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--alto-toque);
+  height: var(--alto-toque);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radio-pildora);
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.aviso__cerrar:hover {
+  background: color-mix(in srgb, var(--color-espresso) 14%, transparent);
+}
+
+.portada .aviso :focus-visible {
+  outline-color: var(--color-espresso);
+  outline-offset: -4px;
+}

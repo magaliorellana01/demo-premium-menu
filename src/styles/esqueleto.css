@@ -26,6 +26,11 @@
   height: 1.1rem;
 }
 
+.esq--estado {
+  width: min(15rem, 62vw);
+  height: 1.4rem;
+}
+
 .esq--boton {
   width: 10rem;
   height: var(--alto-toque);

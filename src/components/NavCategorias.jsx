@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { idCategoria } from '../lib/formato'
 import { comportamientoScroll } from '../lib/movimiento'
 import { useCategoriaActiva } from '../lib/useCategoriaActiva'
 
-// Barra fija con un enlace por categoría. Son enlaces normales a #id: funcionan
+// Barra fija con un enlace por sección de la página (las categorías y, si existe,
+// "Visitanos"): items = [{ id, nombre }]. Son enlaces normales a #id: funcionan
 // aunque falle el JavaScript; el scroll suave y el scroll-margin-top los
 // resuelve el CSS.
-export default function NavCategorias({ categorias }) {
-  const ids = categorias.map(idCategoria)
+export default function NavCategorias({ items }) {
+  const ids = items.map((item) => item.id)
   const [activa, setActiva] = useCategoriaActiva(ids)
   const listaRef = useRef(null)
 
@@ -20,20 +20,20 @@ export default function NavCategorias({ categorias }) {
     lista.scrollTo({ left: izquierda, behavior: comportamientoScroll() })
   }, [activa])
 
-  if (categorias.length < 2) return null
+  if (items.length < 2) return null
 
   return (
-    <nav className="nav" aria-label="Categorías del menú">
+    <nav className="nav" aria-label="Secciones del menú">
       <ul className="nav__lista" ref={listaRef} role="list">
-        {categorias.map((categoria, indice) => (
-          <li key={categoria.id}>
+        {items.map((item) => (
+          <li key={item.id}>
             <a
               className="nav__enlace"
-              href={`#${ids[indice]}`}
-              aria-current={activa === ids[indice] ? 'true' : undefined}
-              onClick={() => setActiva(ids[indice])}
+              href={`#${item.id}`}
+              aria-current={activa === item.id ? 'true' : undefined}
+              onClick={() => setActiva(item.id)}
             >
-              {categoria.nombre}
+              {item.nombre}
             </a>
           </li>
         ))}

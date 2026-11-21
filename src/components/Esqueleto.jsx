@@ -28,6 +28,7 @@ export default function Esqueleto() {
             <div className="esq esq--logo" />
             <div className="esq esq--frase" />
             <div className="esq esq--descripcion" />
+            <div className="esq esq--estado" />
             <div className="esq esq--boton" />
           </div>
         </div>

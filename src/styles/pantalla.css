@@ -38,6 +38,18 @@
   background: var(--color-acento-texto);
 }
 
+/* Sobre fondo claro, secundario: contorno espresso */
+.boton--contorno {
+  border-color: var(--color-texto);
+  background: transparent;
+  color: var(--color-texto);
+}
+
+.boton--contorno:hover {
+  background: var(--color-texto);
+  color: var(--color-fondo);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .boton {
     transition: background-color var(--duracion-corta) ease;

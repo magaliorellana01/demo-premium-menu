@@ -10,7 +10,7 @@ const AdminApp = lazy(() => import('./admin/AdminApp'))
 
 // Mientras baja el código del panel: una pantalla vacía y neutra (sin el menú ni parpadeos).
 function CargandoPanel() {
-  return <div style={{ minHeight: '100vh', background: '#f4f4f1' }} role="status" aria-label="Cargando…" />
+  return <div style={{ minHeight: '100vh', background: 'var(--color-fondo-suave)' }} role="status" aria-label="Cargando…" />
 }
 
 export default function App() {

@@ -1,0 +1,32 @@
+/*
+  Tokens del panel. Casi todo DERIVA de los tokens de marca (src/styles/tokens.css): el panel
+  se ve como el menú público de Aroma. Usa la marca fija: no depende de locales.tema.
+*/
+
+.admin {
+  /* Superficies: la página usa el fondo suave de la franja de destacados y las tarjetas, porcelana */
+  --adm-fondo: var(--color-fondo-suave);
+  --adm-superficie: var(--color-fondo);
+  --adm-borde: color-mix(in srgb, var(--color-borde) 60%, var(--color-fondo));
+  --adm-borde-control: color-mix(in srgb, var(--color-texto) 55%, var(--color-fondo)); /* igual que el buscador del menú */
+  --adm-texto: var(--color-texto);
+  --adm-texto-suave: var(--color-texto-suave); /* 5,7:1 sobre el fondo suave */
+
+  /* Éxito: salvia oscurecida (la salvia pura no llega a 4,5:1 en texto chico) */
+  --adm-exito: color-mix(in srgb, var(--color-salvia) 70%, var(--color-espresso));
+  --adm-exito-fondo: color-mix(in srgb, var(--color-salvia) 14%, var(--color-fondo));
+
+  /*
+    Error y acciones destructivas. La marca no tiene un color de alerta y el cobre no se distingue
+    como "peligro": este rojo es el ÚNICO color que no sale de la paleta, y todo lo demás de error
+    deriva de él mezclado con colores de marca.
+  */
+  --adm-alerta-base: #9b2c2c;
+  --adm-peligro: color-mix(in srgb, var(--adm-alerta-base) 82%, var(--color-espresso)); /* > 7:1 sobre porcelana */
+  --adm-peligro-fondo: color-mix(in srgb, var(--adm-alerta-base) 9%, var(--color-fondo));
+
+  --adm-info-fondo: color-mix(in srgb, var(--color-acento) 12%, var(--color-fondo));
+
+  --adm-alto-pestanas: 3.75rem; /* barra inferior en el celular */
+  --adm-ancho: 52rem;
+}

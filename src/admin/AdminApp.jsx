@@ -1,24 +1,28 @@
-import { Link, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import estilos from './admin.css?inline'
 import InicioAdmin from './InicioAdmin'
 import LocalLayout from './LocalLayout'
 import LoginPage from './LoginPage'
+import PaginaCategorias from './PaginaCategorias'
+import PantallaAviso from './PantallaAviso'
 import Proximamente from './Proximamente'
 import Resumen from './Resumen'
 import RutaProtegida from './RutaProtegida'
 import SesionProvider from './SesionProvider'
 import { adminConfigurado } from './datos'
+import Boton from './ui/Boton'
+import Tarjeta from './ui/Tarjeta'
 
 function PaginaNoEncontrada() {
   return (
-    <section className="adm-tarjeta adm-tarjeta--aviso">
+    <Tarjeta como="section" className="adm-bloque">
       <h1 className="adm-titulo">No encontramos esta página</h1>
-      <div className="adm-acciones">
-        <Link className="adm-boton adm-boton--primario" to="/admin">
+      <div className="ui-acciones">
+        <Boton variante="primario" to="/admin">
           Volver al panel
-        </Link>
+        </Boton>
       </div>
-    </section>
+    </Tarjeta>
   )
 }
 
@@ -35,12 +39,9 @@ export default function AdminApp() {
       <meta name="robots" content="noindex" />
 
       {!adminConfigurado ? (
-        <main className="adm-centro">
-          <div className="adm-tarjeta adm-tarjeta--aviso">
-            <h1 className="adm-titulo">El panel no está configurado</h1>
-            <p className="adm-texto">Faltan las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY (ver .env.example).</p>
-          </div>
-        </main>
+        <PantallaAviso titulo="El panel no está configurado">
+          <p>Faltan las variables VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY (ver .env.example).</p>
+        </PantallaAviso>
       ) : (
         <SesionProvider>
           <Routes>
@@ -49,7 +50,7 @@ export default function AdminApp() {
               <Route index element={<InicioAdmin />} />
               <Route path=":slug" element={<LocalLayout />}>
                 <Route index element={<Resumen />} />
-                <Route path="categorias" element={<Proximamente titulo="Categorías" />} />
+                <Route path="categorias" element={<PaginaCategorias />} />
                 <Route path="productos" element={<Proximamente titulo="Productos" />} />
                 <Route path="ajustes" element={<Proximamente titulo="Ajustes" soloDueno />} />
                 <Route path="*" element={<PaginaNoEncontrada />} />

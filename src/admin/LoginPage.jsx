@@ -4,6 +4,10 @@ import PantallaCarga from './PantallaCarga'
 import { iniciarSesion } from './datos'
 import { mensajeErrorLogin, validarLogin } from './login'
 import { destinoTrasLogin } from './permisos'
+import Alerta from './ui/Alerta'
+import Boton from './ui/Boton'
+import Campo from './ui/Campo'
+import Tarjeta from './ui/Tarjeta'
 import { useSesion } from './useSesion'
 
 function Ojo({ tachado }) {
@@ -66,34 +70,29 @@ export default function LoginPage() {
     }
   }
 
-  const idEmail = `${id}-email`
-  const idPassword = `${id}-password`
   const idError = `${id}-error`
 
   return (
     <main className="adm-centro">
-      <div className="adm-tarjeta adm-login">
-        <p className="adm-marca">
-          OESTACK <span>Panel</span>
-        </p>
-        <h1 className="adm-titulo">Ingresar al panel</h1>
-        <p className="adm-texto adm-texto--suave">Usá el email y la contraseña que te dio OESTACK.</p>
+      <title>Ingresar · Panel OESTACK</title>
+      <Tarjeta className="adm-portada adm-login">
+        <div className="adm-portada__franja">
+          <p className="adm-marca">OESTACK · Panel</p>
+          <h1>Ingresar al panel</h1>
+          <p className="adm-portada__bajada">Usá el email y la contraseña que te dio OESTACK.</p>
+        </div>
 
-        {vencida && (
-          <p className="adm-aviso" role="status">
-            Tu sesión venció. Ingresá de nuevo para seguir.
-          </p>
-        )}
+        <div className="adm-portada__cuerpo">
+          {vencida && (
+            <Alerta tipo="info" role="status" data-aviso="vencida">
+              Tu sesión venció. Ingresá de nuevo para seguir.
+            </Alerta>
+          )}
 
-        <form className="adm-formulario" onSubmit={alEnviar} noValidate>
-          <div className="adm-campo">
-            <label htmlFor={idEmail} className="adm-etiqueta">
-              Email
-            </label>
-            <input
+          <form className="adm-formulario" onSubmit={alEnviar} noValidate>
+            <Campo
               ref={emailRef}
-              id={idEmail}
-              className="adm-entrada"
+              etiqueta="Email"
               type="email"
               name="email"
               autoComplete="username"
@@ -103,63 +102,45 @@ export default function LoginPage() {
               spellCheck={false}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              aria-invalid={errores.email ? 'true' : undefined}
-              aria-describedby={errores.email ? `${idEmail}-error` : undefined}
+              error={errores.email}
             />
-            {errores.email && (
-              <p id={`${idEmail}-error`} className="adm-error-campo">
-                {errores.email}
-              </p>
-            )}
-          </div>
 
-          <div className="adm-campo">
-            <label htmlFor={idPassword} className="adm-etiqueta">
-              Contraseña
-            </label>
-            <div className="adm-entrada-con-boton">
-              <input
-                ref={passwordRef}
-                id={idPassword}
-                className="adm-entrada"
-                type={verPassword ? 'text' : 'password'}
-                name="password"
-                autoComplete="current-password"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                aria-invalid={errores.password ? 'true' : undefined}
-                aria-describedby={errores.password ? `${idPassword}-error` : undefined}
-              />
-              <button
-                type="button"
-                className="adm-ojo"
-                onClick={() => setVerPassword((v) => !v)}
-                aria-pressed={verPassword}
-                aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-              >
-                <Ojo tachado={verPassword} />
-              </button>
-            </div>
-            {errores.password && (
-              <p id={`${idPassword}-error`} className="adm-error-campo">
-                {errores.password}
-              </p>
-            )}
-          </div>
+            <Campo
+              ref={passwordRef}
+              etiqueta="Contraseña"
+              type={verPassword ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={errores.password}
+              accesorio={
+                <button
+                  type="button"
+                  className="ui-campo__accesorio"
+                  onClick={() => setVerPassword((v) => !v)}
+                  aria-pressed={verPassword}
+                  aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                >
+                  <Ojo tachado={verPassword} />
+                </button>
+              }
+            />
 
-          {/* Siempre está en la página, así el lector de pantalla anuncia el texto cuando aparece. */}
-          <p id={idError} className="adm-error" aria-live="polite" aria-atomic="true">
-            {errorGeneral}
-          </p>
+            {/* Siempre está en la página, así el lector de pantalla anuncia el texto cuando aparece. */}
+            <p id={idError} className="adm-error" aria-live="polite" aria-atomic="true">
+              {errorGeneral}
+            </p>
 
-          <button type="submit" className="adm-boton adm-boton--primario adm-boton--ancho" aria-disabled={enviando}>
-            {enviando ? 'Ingresando…' : 'Ingresar'}
-          </button>
-        </form>
-      </div>
+            <Boton variante="primario" type="submit" ancho cargando={enviando} textoCargando="Ingresando…">
+              Ingresar
+            </Boton>
+          </form>
+        </div>
+      </Tarjeta>
     </main>
   )
 }

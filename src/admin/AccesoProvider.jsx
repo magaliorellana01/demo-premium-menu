@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import PantallaAviso from './PantallaAviso'
 import PantallaCarga from './PantallaCarga'
 import { AccesoContexto } from './contextos'
 import { cargarAcceso } from './datos'
+import Boton from './ui/Boton'
 import { useSesion } from './useSesion'
 
 // Carga qué locales puede ver el usuario y con qué rol, y recién entonces muestra el panel
@@ -32,20 +34,19 @@ export default function AccesoProvider({ usuario, children }) {
   if (resultado?.clave !== clave) return <PantallaCarga />
   if (resultado.error) {
     return (
-      <main className="adm-centro">
-        <div className="adm-tarjeta adm-tarjeta--aviso">
-          <h1 className="adm-titulo">No pudimos cargar tu acceso</h1>
-          <p className="adm-texto">Parece un problema de conexión. Probá de nuevo en unos instantes.</p>
-          <div className="adm-acciones">
-            <button type="button" className="adm-boton adm-boton--primario" onClick={recargar}>
+      <PantallaAviso
+        titulo="No pudimos cargar tu acceso"
+        acciones={
+          <>
+            <Boton variante="primario" onClick={recargar}>
               Reintentar
-            </button>
-            <button type="button" className="adm-boton" onClick={cerrarSesion}>
-              Salir
-            </button>
-          </div>
-        </div>
-      </main>
+            </Boton>
+            <Boton onClick={cerrarSesion}>Salir</Boton>
+          </>
+        }
+      >
+        <p>Parece un problema de conexión. Probá de nuevo en unos instantes.</p>
+      </PantallaAviso>
     )
   }
 

@@ -5,9 +5,9 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 único proyecto de Supabase (Postgres + Auth + Storage) y datos separados por local (multi-tenant).
 
 - Menú público: `/:slug` (ej. `/aroma`)
-- Panel de administración: `/admin` (login, permisos y estructura base; categorías, productos y ajustes llegan en las próximas tareas)
+- Panel de administración: `/admin` (login, permisos y administración de categorías; productos y ajustes llegan en las próximas tareas)
 
-Estado: **Tarea 8** (panel: ingreso, permisos y estructura base). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
+Estado: **Tarea 9** (panel con la estética de la marca y administración de categorías). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
 
 ## Cómo correrlo
 
@@ -74,7 +74,8 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
     columnas nuevas ya son legibles. Al final devuelve `con_variantes = 5` y `categorias_con_adicionales = 1`, y una segunda consulta
     que debe venir vacía. Sin este paso el menú funciona igual, solo que sin variantes ni adicionales.
 12. Antes del panel: crear los usuarios de prueba y correr `supabase/08-admin-base.sql` (ver "Panel de administración" más abajo).
-13. `npm run dev` y abrir `/aroma`.
+13. Para reordenar categorías desde el panel: correr `supabase/09-admin-categorias.sql` (ver "Categorías" más abajo).
+14. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -110,7 +111,7 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs   Pruebas de lógica pura (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs   Pruebas de lógica pura (npm run probar)
   verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
@@ -137,6 +138,7 @@ supabase/
   06-etiquetas.sql      Etiquetas de ejemplo en los productos de aroma
   07-variantes-adicionales.sql   Variantes de producto, adicionales por categoría, restricciones y ejemplos
   08-admin-base.sql     Panel: slug "login" reservado, local de prueba inactivo y membresías de los usuarios de prueba
+  09-admin-categorias.sql   Función para reordenar categorías de forma atómica
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -292,8 +294,8 @@ vacía no aparece nada. Siguen visibles mientras se busca o se filtra dentro de 
 
 ## Panel de administración (`/admin`)
 
-Cada local edita su propio menú desde `/admin`. En esta tarea están el ingreso, los permisos y la estructura; categorías, productos
-y ajustes (hoy "Próximamente") llegan después.
+Cada local edita su propio menú desde `/admin`. Ya están el ingreso, los permisos y las **categorías**; productos y ajustes
+(hoy "Próximamente") llegan después.
 
 **Rutas**
 - `/admin/login`: ingreso con email y contraseña (sin "olvidé mi contraseña": las contraseñas se resetean desde el dashboard de Supabase).
@@ -306,7 +308,7 @@ y ajustes (hoy "Próximamente") llegan después.
 
 **Código dividido:** el panel se carga con `React.lazy` solo en `/admin/*`. El cliente completo de Supabase (`@supabase/supabase-js`) y todo lo del
 panel viajan en su propio archivo (~228 kB, ~60 kB comprimido); el menú público sigue usando el cliente liviano (`postgrest-js`) y no lo descarga.
-La carga diferida suma al JS del menú público unos 2,3 kB (menos de 1 kB comprimido) por el mecanismo de Vite. Los estilos del panel
+La carga diferida suma al JS del menú público unos 2,4 kB (menos de 1 kB comprimido) por el mecanismo de Vite. Los estilos del panel
 (`src/admin/admin.css`) viajan dentro de ese mismo archivo.
 
 **La protección de rutas del frontend es solo comodidad. La seguridad real vive en el RLS de la base** (`supabase/schema.sql`): aunque alguien se
@@ -322,6 +324,37 @@ saltee la interfaz, Postgres rechaza lo que no le corresponde. El panel usa solo
 
 Un usuario solo lee sus propias filas de `usuarios_locales` y `admins` (políticas `usuarios_locales_lectura_propia` y `admins_lectura_propia`, que ya
 existían en `schema.sql`). Escribir en esas tablas es solo de admins (`usuarios_locales`) o de nadie por la API (`admins`: se cargan desde el SQL Editor).
+
+### Estética del panel
+
+El panel usa **la misma marca que el menú público de Aroma**: los tokens de `src/styles/tokens.css`, las fuentes autoalojadas (Lato y
+Liberation Serif Italic), botones píldora, chips, el campo del buscador y tarjetas porcelana. `src/admin/tokens-admin.css` solo agrega lo que
+faltaba, derivado de los colores de marca (la única excepción es el rojo de error y acciones destructivas, que la paleta no tiene).
+Componentes compartidos en `src/admin/ui/`: `Boton`, `Campo`, `Tarjeta`, `Alerta`, `Interruptor` (`role="switch"`), `AvisoEstado`
+(región `aria-live` para "Guardado" y errores) y `Confirmacion` (en línea, sin modales). En el celular la navegación es una barra inferior.
+
+> El panel usa los tokens **fijos** de Aroma: no depende de `locales.tema`. Si más adelante cada cliente tiene su propia marca, habrá que
+> decidir si el panel hereda su tema o se mantiene igual para todos.
+
+### Categorías (`/admin/:slug/categorias`)
+
+- Listado en el orden del menú, con la cantidad de productos y si está visible u oculta. Estados de carga (esqueleto), vacío y error con "Reintentar".
+- **Crear y editar** el nombre (hasta 60 caracteres; se recortan los espacios). No se permiten dos nombres que den el mismo enlace de sección
+  (por ejemplo "Cafés" y "cafes"), porque romperían la barra de categorías del menú. La tabla no tiene columna de descripción.
+- **Ocultar o mostrar** con un interruptor (columna `activa`). Lo oculto desaparece del menú público (RLS). Las categorías **sin productos**
+  tampoco aparecen en el menú.
+- **Reordenar** con los botones subir y bajar (usables con teclado y lector de pantalla, con anuncio de la nueva posición). Se guarda con la
+  función `reordenar_categorias` (ver abajo).
+- **Adicionales** (`categorias.adicionales`): alta, edición y baja; hasta 8, nombre obligatorio y sin repetir, precio no negativo
+  (se puede escribir "600", "1.200" o "1.200,50"). Reutiliza `src/lib/precios.js`; la base además lo valida.
+- **Eliminar:** solo categorías vacías, con confirmación en línea. Si tiene productos se informa cuántos y se ofrece ocultarla (la clave foránea
+  también lo impide en la base).
+- Permisos: `usePermisos(slug).puedeGestionarMenu` (dueño, editor y admin) decide qué controles se ven; **el permiso real lo impone el RLS**.
+
+**`supabase/09-admin-categorias.sql`:** reordenar son varios `UPDATE`; hechos sueltos, una falla dejaría órdenes repetidos. La función
+`public.reordenar_categorias(local, ids)` lo hace en **una sola transacción**. Es `SECURITY INVOKER` (el RLS sigue valiendo), comprueba que quien
+la llama sea miembro o admin, exige la lista exacta de categorías del local, bloquea las filas mientras reordena y solo la pueden ejecutar usuarios
+con sesión. No cambia tablas ni políticas. Su consulta de control debe dar `security_definer = false`, `anon_puede = false` y `con_sesion_puede = true`.
 
 ### Configuración manual en Supabase (una sola vez)
 
@@ -360,7 +393,8 @@ existían en `schema.sql`). Escribir en esas tablas es solo de admins (`usuarios
 3. Completar en `.env` (no se versiona) `TEST_USER1_EMAIL`, `TEST_USER1_PASSWORD`, `TEST_USER2_EMAIL` y `TEST_USER2_PASSWORD`.
 4. `npm run verificar:permisos` comprueba contra Supabase real, con la clave anon: que el usuario 1 lee y escribe en su local; que no puede modificar ni crear nada
    en `local-prueba`; que el usuario 2 no puede tocar `aroma`; que un anónimo no puede escribir en ninguna tabla; que las imágenes solo se suben a la carpeta del
-   propio local; y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
+   propio local; las categorías (crear, editar, borrar, adicionales inválidos, borrado con productos y reordenar con la función 09, incluidos los
+   intentos que deben fallar); y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
    inactivas y escribe valores idénticos a los que ya había) y al final verifica que todo quedó como estaba.
 5. `npm run probar` corre además las pruebas de lógica pura de permisos y del formulario de ingreso (`scripts/probar-permisos.mjs`), sin red.
 

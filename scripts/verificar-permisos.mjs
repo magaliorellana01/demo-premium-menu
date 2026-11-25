@@ -70,7 +70,7 @@ async function contar(cliente, tabla, filtro) {
   return r.count
 }
 
-const contexto = { aroma: null, prueba: null, antes: null }
+const contexto = { aroma: null, prueba: null, antes: null, fotoCategorias: null, categoriasAntes: null }
 const creadas = { aroma: { categorias: [], productos: [] }, prueba: { categorias: [], productos: [] }, archivos: [] }
 
 async function limpiarTemporales() {
@@ -126,6 +126,13 @@ try {
     prueba: { cats: await contar(c2, 'categorias', { local_id: pruebaPorU2.id }), prods: await contar(c2, 'productos', { local_id: pruebaPorU2.id }) },
   }
   contexto.antes = antes
+  const fotoCategorias = async () => {
+    const r = await c1.from('categorias').select('id, nombre, orden, activa, adicionales').eq('local_id', aroma.id).not('nombre', 'like', `${PREFIJO}%`).order('id')
+    if (r.error) throw new Error(`No se pudieron leer las categorías de aroma: ${r.error.message}`)
+    return JSON.stringify(r.data)
+  }
+  contexto.fotoCategorias = fotoCategorias
+  contexto.categoriasAntes = await fotoCategorias()
 
   // ═══ USUARIO 1: owner de aroma ═══════════════════════════════
   seccion('Usuario 1 (owner de aroma): lo suyo')
@@ -256,6 +263,84 @@ try {
   if (!r.error) creadas.archivos.push([c1, `${aroma.id}/${PREFIJO}-3.png`])
   ver(Boolean(r.error), 'Un anónimo NO puede subir archivos', r.error ? r.error.message : 'SE SUBIÓ (debería estar bloqueado)')
 
+  // ═══ CATEGORÍAS (Tarea 9) ════════════════════════════════════
+  seccion('Categorías: usuario 1 en aroma (crear, editar, adicionales, borrar)')
+  r = await c1.from('categorias').insert({ local_id: aroma.id, nombre: `${PREFIJO}vacia`, activa: false, orden: 998 }).select('id')
+  const catVacia = r.data?.[0]?.id
+  ver(permitida(r), 'Crea una categoría', msgOk(r))
+  r = await c1.from('categorias').update({ nombre: `${PREFIJO}renombrada` }).eq('id', catVacia ?? UUID_INEXISTENTE).select('id, nombre')
+  ver(permitida(r) && r.data[0].nombre === `${PREFIJO}renombrada`, 'Edita su nombre', msgOk(r))
+  r = await c1.from('categorias').update({ adicionales: [{ nombre: 'Leche vegetal', precio: 600 }, { nombre: 'Shot extra', precio: 800.5 }] }).eq('id', catVacia ?? UUID_INEXISTENTE).select('adicionales')
+  ver(permitida(r) && r.data[0].adicionales.length === 2, 'Guarda adicionales válidos', msgOk(r))
+  const invalidos = {
+    '9 adicionales (máximo 8)': Array.from({ length: 9 }, (_, i) => ({ nombre: `A${i}`, precio: 1 })),
+    'precio negativo': [{ nombre: 'X', precio: -1 }],
+    'precio como texto': [{ nombre: 'X', precio: '600' }],
+    'sin nombre': [{ precio: 1 }],
+    'no es una lista': { nombre: 'X', precio: 1 },
+  }
+  for (const [caso, adicionales] of Object.entries(invalidos)) {
+    r = await c1.from('categorias').update({ adicionales }).eq('id', catVacia ?? UUID_INEXISTENTE).select('id')
+    ver(r.error?.code === '23514', `La base rechaza adicionales inválidos: ${caso}`, msg(r))
+  }
+  r = await c1.from('categorias').delete().eq('id', catTemp ?? UUID_INEXISTENTE).select('id')
+  ver(r.error?.code === '23503', 'NO puede borrar una categoría que tiene productos (clave foránea)', msg(r))
+  r = await c1.from('categorias').update({ local_id: pruebaPorU2.id }).eq('id', catVacia ?? UUID_INEXISTENTE).select('id')
+  ver(bloqueada(r), 'NO puede mover una categoría suya a un local ajeno', msg(r))
+  r = await c1.from('categorias').insert({ local_id: pruebaPorU2.id, nombre: `${PREFIJO}ajena`, activa: false }).select('id')
+  ver(bloqueada(r), 'NO puede crear una categoría con local_id ajeno', msg(r))
+  if (permitida(r)) creadas.prueba.categorias.push(r.data[0].id)
+  r = await c2.from('categorias').update({ nombre: `${PREFIJO}hack` }).eq('id', catVacia ?? UUID_INEXISTENTE).select('id')
+  ver(bloqueada(r), 'Usuario 2 NO puede editar una categoría de aroma', msg(r))
+  r = await c2.from('categorias').update({ adicionales: [] }).eq('id', catVacia ?? UUID_INEXISTENTE).select('id')
+  ver(bloqueada(r), 'Usuario 2 NO puede cambiar adicionales de aroma', msg(r))
+  r = await anon.from('categorias').update({ nombre: 'x' }).eq('id', catVacia ?? UUID_INEXISTENTE).select('id')
+  ver(bloqueada(r), 'Un anónimo NO puede editar una categoría que existe', msg(r))
+  r = await c1.from('categorias').delete().eq('id', catVacia ?? UUID_INEXISTENTE).select('id')
+  ver(permitida(r), 'Borra una categoría vacía', msgOk(r))
+
+  seccion('Reordenar categorías (función reordenar_categorias)')
+  const ordenDe = async (cliente, localId) => {
+    const q = await cliente.from('categorias').select('id, orden, nombre').eq('local_id', localId).order('orden').order('nombre')
+    if (q.error) throw new Error(`No se pudo leer el orden: ${q.error.message}`)
+    return q.data
+  }
+  const originalAroma = await ordenDe(c1, aroma.id) // incluye la temporal con productos
+  const segunda = (await c1.from('categorias').insert({ local_id: aroma.id, nombre: `${PREFIJO}segunda`, activa: false, orden: 1000 }).select('id')).data?.[0]?.id
+  const listaIds = (await ordenDe(c1, aroma.id)).map((c) => c.id)
+  // Se intercambian SOLO las dos temporales (que quedan al final): las reales no cambian de lugar.
+  const intercambiada = [...listaIds.slice(0, -2), listaIds.at(-1), listaIds.at(-2)]
+  const rpc = await c1.rpc('reordenar_categorias', { p_local_id: aroma.id, p_ids: intercambiada })
+  const falta = rpc.error?.code === 'PGRST202'
+  ver(!rpc.error, 'Usuario 1 reordena las categorías de su local', rpc.error ? (falta ? 'la función no existe todavía: corré supabase/09-admin-categorias.sql' : msg(rpc)) : 'ok')
+
+  // Sin la función, las pruebas de "NO puede" pasarían solas (darían error igual): solo valen si existe.
+  if (!rpc.error) {
+    const despues = await ordenDe(c1, aroma.id)
+    ver(JSON.stringify(despues.map((c) => c.id)) === JSON.stringify(intercambiada), 'El orden guardado es exactamente el pedido')
+    ver(despues.map((c) => c.orden).join() === despues.map((_, i) => i + 1).join(), 'No quedan órdenes repetidos (1, 2, 3...)', despues.map((c) => c.orden).join(','))
+
+    const prueba = await ordenDe(c2, pruebaPorU2.id)
+    const sinCambios = async () => JSON.stringify(await ordenDe(c1, aroma.id)) === JSON.stringify(despues)
+    let x = await c1.rpc('reordenar_categorias', { p_local_id: aroma.id, p_ids: intercambiada.slice(1) })
+    ver(x.error?.code === '22023' && (await sinCambios()), 'Lista incompleta: rechazada y nada cambia', msg(x))
+    x = await c1.rpc('reordenar_categorias', { p_local_id: aroma.id, p_ids: [intercambiada[0], ...intercambiada.slice(0, -1)] })
+    ver(x.error?.code === '22023' && (await sinCambios()), 'Ids repetidos: rechazada y nada cambia', msg(x))
+    x = await c1.rpc('reordenar_categorias', { p_local_id: aroma.id, p_ids: [...intercambiada.slice(0, -1), prueba[0].id] })
+    ver(x.error?.code === '22023' && (await sinCambios()), 'Un id de otro local en la lista: rechazada y nada cambia', msg(x))
+    x = await c1.rpc('reordenar_categorias', { p_local_id: pruebaPorU2.id, p_ids: prueba.map((c) => c.id) })
+    ver(x.error?.code === '42501', 'Usuario 1 NO puede reordenar el local de prueba', msg(x))
+    x = await c2.rpc('reordenar_categorias', { p_local_id: aroma.id, p_ids: intercambiada })
+    ver(x.error?.code === '42501' && (await sinCambios()), 'Usuario 2 NO puede reordenar aroma', msg(x))
+    x = await anon.rpc('reordenar_categorias', { p_local_id: aroma.id, p_ids: intercambiada })
+    ver(x.error?.code === '42501' && (await sinCambios()), 'Un anónimo NO puede ejecutar la función (sin permiso de ejecución)', msg(x))
+    x = await c2.rpc('reordenar_categorias', { p_local_id: pruebaPorU2.id, p_ids: (await ordenDe(c2, pruebaPorU2.id)).map((c) => c.id) })
+    ver(!x.error, 'Usuario 2 reordena su propio local', x.error ? msg(x) : 'ok')
+  }
+  // Borra la segunda temporal y restaura el orden que tenía cada categoría.
+  if (segunda) await c1.from('categorias').delete().eq('id', segunda)
+  for (const categoria of originalAroma) await c1.from('categorias').update({ orden: categoria.orden }).eq('id', categoria.id)
+
   // ═══ ANÓNIMO ═════════════════════════════════════════════════
   seccion('Anónimo (sin sesión): sigue sin poder escribir en ninguna tabla')
   const falsos = {
@@ -328,6 +413,7 @@ try {
       }
       ver(despues.aromaCats === antes.aroma.cats && despues.aromaProds === antes.aroma.prods, 'aroma quedó con la misma cantidad de categorías y productos', `${despues.aromaCats} cat. / ${despues.aromaProds} prod. (antes: ${antes.aroma.cats} / ${antes.aroma.prods})`)
       ver(despues.pruebaCats === antes.prueba.cats && despues.pruebaProds === antes.prueba.prods, 'local-prueba quedó con la misma cantidad de categorías y productos', `${despues.pruebaCats} cat. / ${despues.pruebaProds} prod. (antes: ${antes.prueba.cats} / ${antes.prueba.prods})`)
+      ver((await contexto.fotoCategorias()) === contexto.categoriasAntes, 'Las categorías reales de aroma quedaron idénticas (nombre, orden, visibilidad y adicionales)')
       const estado = await c2.from('locales').select('activo, descripcion, nombre').eq('id', prueba.id).maybeSingle()
       ver(estado.data?.activo === false && estado.data?.nombre === prueba.nombre, 'El local de prueba sigue inactivo y con su nombre', estado.error ? msg(estado) : '')
       const estadoAroma = await anon.from('locales').select('activo, nombre, descripcion').eq('id', aroma.id).maybeSingle()

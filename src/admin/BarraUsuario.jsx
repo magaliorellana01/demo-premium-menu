@@ -1,8 +1,8 @@
 import { nombreDeRol } from './permisos'
+import Boton from './ui/Boton'
 import { useSesion } from './useSesion'
 
-// Quién está logueado, su rol (si corresponde) y el botón de salir. Se usa en el panel de un
-// local y en las pantallas previas (elegir local, sin acceso...).
+// Quién está logueado, su rol (si corresponde) y el botón de salir.
 export default function BarraUsuario({ rol = null }) {
   const { usuario, cerrarSesion } = useSesion()
   return (
@@ -15,9 +15,9 @@ export default function BarraUsuario({ rol = null }) {
           </span>
         )}
       </p>
-      <button type="button" className="adm-boton adm-boton--chico" onClick={cerrarSesion}>
+      <Boton chico onClick={cerrarSesion}>
         Salir
-      </button>
+      </Boton>
     </div>
   )
 }

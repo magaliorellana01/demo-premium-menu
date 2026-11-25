@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { cargarResumen } from './datos'
 import { descripcionDeRol, nombreDeRol } from './permisos'
+import Alerta from './ui/Alerta'
+import Boton from './ui/Boton'
+import Tarjeta from './ui/Tarjeta'
 
 // Inicio del local: estado, cantidad de categorías y de productos, y enlaces útiles.
 export default function Resumen() {
@@ -31,66 +34,58 @@ export default function Resumen() {
     <>
       <h1 className="adm-titulo">Inicio</h1>
 
-      <section aria-labelledby="titulo-resumen" aria-busy={estado.cargando}>
+      <section className="adm-bloque" aria-labelledby="titulo-resumen" aria-busy={estado.cargando}>
         <h2 id="titulo-resumen" className="adm-subtitulo">
           Resumen del local
         </h2>
         <dl className="adm-datos">
-          <div className="adm-dato">
+          <Tarjeta className="adm-dato">
             <dt>Estado</dt>
             <dd>
-              <span className={`adm-estado ${local.activo ? 'adm-estado--activo' : 'adm-estado--inactivo'}`}>{local.activo ? 'Activo' : 'Inactivo'}</span>
+              <span className={`ui-chip adm-estado ${local.activo ? 'ui-chip--salvia' : 'ui-chip--cobre'}`}>{local.activo ? 'Activo' : 'Inactivo'}</span>
             </dd>
-          </div>
-          <div className="adm-dato">
+          </Tarjeta>
+          <Tarjeta className="adm-dato">
             <dt>Categorías</dt>
             <dd className="adm-dato__numero">{valor('categorias')}</dd>
-          </div>
-          <div className="adm-dato">
+          </Tarjeta>
+          <Tarjeta className="adm-dato">
             <dt>Productos</dt>
             <dd className="adm-dato__numero">{valor('productos')}</dd>
-          </div>
+          </Tarjeta>
         </dl>
         {estado.error && (
-          <p className="adm-error-bloque" role="alert">
-            No pudimos cargar el resumen.{' '}
-            <button type="button" className="adm-enlace adm-enlace--boton" onClick={() => setIntento((n) => n + 1)}>
-              Reintentar
-            </button>
-          </p>
+          <Alerta tipo="error" role="alert" acciones={<Boton onClick={() => setIntento((n) => n + 1)}>Reintentar</Boton>}>
+            No pudimos cargar el resumen. Revisá tu conexión.
+          </Alerta>
         )}
       </section>
 
-      <section aria-labelledby="titulo-rol">
+      <Tarjeta como="section" className="adm-bloque" aria-labelledby="titulo-rol">
         <h2 id="titulo-rol" className="adm-subtitulo">
           Tu rol
         </h2>
-        <p className="adm-texto">
+        <p>
           <strong>{nombreDeRol(rol)}</strong>. {descripcionDeRol(rol)}
         </p>
-      </section>
+      </Tarjeta>
 
-      <section aria-labelledby="titulo-enlaces">
+      <section className="adm-bloque adm-enlaces" aria-labelledby="titulo-enlaces">
         <h2 id="titulo-enlaces" className="adm-subtitulo">
           Enlaces
         </h2>
-        <ul className="adm-enlaces" role="list">
-          <li>
-            {local.activo ? (
-              <a className="adm-boton" href={`/${local.slug}`} target="_blank" rel="noopener noreferrer">
-                Ver el menú público
-                <span className="solo-lectores"> (se abre en otra pestaña)</span>
-              </a>
-            ) : (
-              <p className="adm-texto adm-texto--suave">El menú público no se muestra mientras el local esté inactivo.</p>
-            )}
-          </li>
-          <li>
-            <p className="adm-texto adm-texto--suave">
-              <strong>Página del QR:</strong> próximamente.
-            </p>
-          </li>
-        </ul>
+        {local.activo ? (
+          <div className="ui-acciones">
+            <Boton variante="primario" href={`/${local.slug}`} target="_blank" rel="noopener noreferrer">
+              Ver el menú público<span className="solo-lectores"> (se abre en otra pestaña)</span>
+            </Boton>
+          </div>
+        ) : (
+          <p className="adm-texto--suave">El menú público no se muestra mientras el local esté inactivo.</p>
+        )}
+        <p className="adm-texto--suave">
+          <strong>Página del QR:</strong> próximamente.
+        </p>
       </section>
     </>
   )

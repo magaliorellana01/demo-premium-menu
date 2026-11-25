@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
-import BarraUsuario from './BarraUsuario'
+import Encabezado from './Encabezado'
 import SinAcceso from './SinAcceso'
 import { useAcceso, usePermisos } from './useAcceso'
+import { useFocoSinTapar } from './useFocoSinTapar'
 
 const SECCIONES = [
   { ruta: '', nombre: 'Inicio', fin: true },
@@ -12,6 +13,7 @@ const SECCIONES = [
 ]
 
 // /admin/:slug: encabezado (local, quién ingresó y su rol, salir), navegación y la página elegida.
+// En el celular la navegación es una barra abajo (a mano del pulgar); desde tablet, arriba.
 // Sin permiso sobre ese local muestra "No tenés acceso" (no dice si el local existe).
 export default function LocalLayout() {
   const { slug } = useParams()
@@ -20,6 +22,8 @@ export default function LocalLayout() {
   const ubicacion = useLocation()
   const principalRef = useRef(null)
   const primeraVez = useRef(true)
+  const barraRef = useRef(null)
+  useFocoSinTapar(barraRef)
 
   // Al cambiar de sección el foco pasa al contenido (el lector de pantalla se entera del cambio).
   useEffect(() => {
@@ -28,7 +32,7 @@ export default function LocalLayout() {
       return
     }
     principalRef.current?.focus({ preventScroll: true })
-    window.scrollTo(0, 0)
+    window.scrollTo({ top: 0, behavior: 'instant' })
   }, [ubicacion.pathname])
 
   const { local, rol } = permisos
@@ -44,36 +48,29 @@ export default function LocalLayout() {
         Saltar al contenido
       </a>
 
-      <header className="adm-cabecera">
-        <div className="adm-cabecera__fila">
-          <p className="adm-marca">
-            OESTACK <span>Panel</span>
-          </p>
-          <BarraUsuario rol={rol} />
-        </div>
-
+      <Encabezado rol={rol}>
         <div className="adm-local">
           <p className="adm-local__nombre">{local.nombre}</p>
-          {!local.activo && <span className="adm-estado adm-estado--inactivo">Inactivo</span>}
+          {!local.activo && <span className="ui-chip ui-chip--cobre adm-estado">Inactivo</span>}
           {puedeCambiar && (
-            <Link className="adm-enlace" to="/admin">
+            <Link className="adm-cambiar" to="/admin">
               Cambiar de local
             </Link>
           )}
         </div>
+      </Encabezado>
 
-        <nav className="adm-nav" aria-label="Secciones del panel">
-          <ul className="adm-nav__lista" role="list">
-            {SECCIONES.map((seccion) => (
-              <li key={seccion.nombre}>
-                <NavLink className="adm-nav__enlace" to={seccion.ruta ? `/admin/${local.slug}/${seccion.ruta}` : `/admin/${local.slug}`} end={seccion.fin}>
-                  {seccion.nombre}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </header>
+      <nav className="adm-pestanas" aria-label="Secciones del panel" ref={barraRef}>
+        <ul className="adm-pestanas__lista" role="list">
+          {SECCIONES.map((seccion) => (
+            <li key={seccion.nombre}>
+              <NavLink className="adm-pestana" to={seccion.ruta ? `/admin/${local.slug}/${seccion.ruta}` : `/admin/${local.slug}`} end={seccion.fin}>
+                {seccion.nombre}
+              </NavLink>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
       <main className="adm-contenido" id="contenido" ref={principalRef} tabIndex={-1}>
         <Outlet context={{ local, rol, permisos }} />

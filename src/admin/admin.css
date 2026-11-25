@@ -5,6 +5,7 @@
 @import './tokens-admin.css';
 @import './ui/ui.css';
 @import './categorias.css';
+@import './productos.css';
 
 .admin {
   min-height: 100vh;

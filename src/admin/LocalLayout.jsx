@@ -38,7 +38,9 @@ export default function LocalLayout() {
   const { local, rol } = permisos
   if (!local) return <SinAcceso />
 
-  const seccionActual = SECCIONES.find((s) => s.ruta && ubicacion.pathname.endsWith(`/${s.ruta}`)) ?? SECCIONES[0]
+  // El tercer tramo de /admin/:slug/<sección>/... (así las pantallas de un producto cuentan como "Productos").
+  const tramo = ubicacion.pathname.split('/')[3]
+  const seccionActual = SECCIONES.find((s) => s.ruta && s.ruta === tramo) ?? SECCIONES[0]
   const puedeCambiar = acceso.esAdmin || acceso.locales.length > 1
 
   return (

@@ -1,0 +1,346 @@
+/* Pantallas de productos. Reutiliza .cat-encabezado, .cat-vacio, .cat__nota y las barras del
+   esqueleto de categorias.css. */
+
+/* ── Filtros ─────────────────────────────────────────────── */
+.prod-filtros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-3);
+}
+
+.prod-filtros > :first-child {
+  grid-column: 1 / -1;
+}
+
+/* Mismo alto que los filtros reales: la lista no salta al cargar */
+.prod-filtros--esqueleto .cat-esqueleto__barra {
+  height: calc(3rem + 1.4rem + var(--espacio-1));
+}
+
+.prod-cuenta {
+  font-size: var(--texto-sm);
+  color: var(--adm-texto-suave);
+}
+
+.prod-grupo {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.prod-grupo__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+}
+
+.prod-grupo__cabecera h2 {
+  overflow-wrap: anywhere;
+}
+
+/* ── Fila de producto ────────────────────────────────────── */
+.prod {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+}
+
+/* Agotado: borde punteado y foto apagada, además del texto del interruptor */
+.prod--agotado {
+  border-style: dashed;
+  border-color: var(--adm-borde-control);
+}
+
+.prod--agotado img.prod__foto {
+  filter: grayscale(1);
+  opacity: 0.65;
+}
+
+.prod__cabecera {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--espacio-3);
+}
+
+.prod__foto {
+  flex: none;
+  width: 4rem;
+  height: 5rem;
+  border-radius: var(--radio-md);
+  background: var(--color-fondo-suave);
+  object-fit: cover;
+}
+
+.prod__foto--vacia {
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--color-borde);
+  font-size: var(--texto-xs);
+  text-align: center;
+  color: var(--adm-texto-suave);
+}
+
+.prod__texto {
+  display: grid;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.prod__nombre {
+  font-size: var(--texto-lg);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.prod__precio {
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.prod__etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prod__estados {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--espacio-1) var(--espacio-3);
+  margin-inline: calc(-1 * var(--espacio-2));
+}
+
+.prod__estados .ui-interruptor__texto {
+  min-width: 5.75rem; /* el texto cambia sin correr nada */
+}
+
+.prod__botones {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  padding-top: var(--espacio-2);
+  border-top: 1px solid var(--adm-borde);
+}
+
+.prod__orden {
+  display: flex;
+  gap: var(--espacio-1);
+  margin-left: calc(-1 * var(--espacio-2));
+}
+
+.prod__editar {
+  margin-left: auto;
+}
+
+.prod-esqueleto {
+  min-height: 13rem;
+  align-content: start;
+}
+
+.prod-archivos {
+  margin: var(--espacio-2) 0 0;
+  padding-left: var(--espacio-4);
+  font-size: var(--texto-xs);
+  overflow-wrap: anywhere;
+}
+
+/* ── Formulario ──────────────────────────────────────────── */
+.prod-volver {
+  justify-self: start;
+  align-self: start;
+  margin-left: calc(-1 * var(--espacio-3));
+  padding-inline: var(--espacio-3);
+}
+
+.prod-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+.prod-form__bloque {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+.prod-form__grupo,
+.foto {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.prod-form__grupo > legend,
+.foto > legend {
+  padding: 0 0 var(--espacio-2);
+}
+
+.prod-form__grupo > .ui-boton {
+  justify-self: start;
+}
+
+.prod-form__etiquetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--espacio-2);
+}
+
+.prod-casilla {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-2);
+  min-height: var(--alto-toque);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--adm-borde-control);
+  border-radius: var(--radio-pildora);
+  font-size: var(--texto-sm);
+  cursor: pointer;
+}
+
+.prod-casilla:has(input:checked) {
+  border-color: var(--adm-exito);
+  background: var(--adm-exito-fondo);
+}
+
+.prod-casilla input {
+  flex: none;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--adm-exito);
+}
+
+.prod-variante {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-3);
+  padding-bottom: var(--espacio-3);
+  border-bottom: 1px solid var(--adm-borde);
+}
+
+.prod-variante__quitar {
+  justify-self: end;
+}
+
+/* ── Foto ────────────────────────────────────────────────── */
+/* El recuadro tiene tamaño fijo (4:5): elegir o quitar la foto no mueve el formulario */
+.foto__vista {
+  display: grid;
+  place-items: center;
+  width: min(12rem, 100%);
+  aspect-ratio: 4 / 5;
+  justify-self: center;
+  overflow: hidden;
+  border: 1px dashed var(--adm-borde-control);
+  border-radius: var(--radio-lg);
+  background: var(--color-fondo-suave);
+}
+
+.foto__vista img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.foto__vacia {
+  font-size: var(--texto-sm);
+  color: var(--adm-texto-suave);
+}
+
+.foto__lado {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--espacio-3);
+}
+
+.foto__entrada {
+  display: none;
+}
+
+.foto__estado {
+  min-height: 1.5em;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+}
+
+.prod-form__fallo:focus {
+  outline: none; /* recibe el foco para que se lea el error */
+}
+
+.prod-form__fallo:focus-visible {
+  outline: 2px solid var(--color-acento-texto);
+  outline-offset: 2px;
+}
+
+.prod-form__progreso {
+  display: grid;
+  gap: var(--espacio-2);
+  font-size: var(--texto-sm);
+}
+
+.prod-form__progreso progress {
+  width: 100%;
+  accent-color: var(--color-acento-texto);
+}
+
+.prod-form__eliminar {
+  display: grid;
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--adm-borde);
+}
+
+.prod-form__eliminar > .ui-boton {
+  justify-self: start;
+  margin-left: 0;
+}
+
+.prod-form-esqueleto {
+  min-height: 24rem;
+}
+
+.prod-form-esqueleto--foto {
+  min-height: 25rem;
+}
+
+@media (min-width: 640px) {
+  .prod-filtros {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .prod-filtros > :first-child {
+    grid-column: auto;
+  }
+
+  .foto {
+    grid-template-columns: 12rem minmax(0, 1fr);
+    column-gap: var(--espacio-5);
+  }
+
+  .foto > legend {
+    grid-column: 1 / -1;
+  }
+
+  .prod-variante {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .prod-variante__quitar {
+    margin-top: calc(1.55rem + var(--espacio-1));
+  }
+
+  .prod__estados {
+    justify-content: flex-start;
+  }
+}

@@ -135,6 +135,17 @@
   font-size: max(16px, 1rem);
 }
 
+select.ui-entrada {
+  padding-right: var(--espacio-2);
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ui-entrada[readonly] {
+  border-style: dashed;
+  background: var(--color-fondo-suave);
+}
+
 textarea.ui-entrada {
   height: auto;
   min-height: 6rem;

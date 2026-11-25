@@ -5,7 +5,8 @@
 //   usuario 2 = owner solo de "local-prueba"    (TEST_USER2_EMAIL / TEST_USER2_PASSWORD)
 //   anónimo   = sin sesión
 //
-// Requiere haber corrido supabase/08-admin-base.sql. Uso:  npm run verificar:permisos
+// Requiere haber corrido supabase/08-admin-base.sql, 09-admin-categorias.sql y
+// 10-admin-productos.sql. Uso:  npm run verificar:permisos
 //
 // Las credenciales salen de .env (que no se versiona); las contraseñas nunca se imprimen.
 //
@@ -13,8 +14,9 @@
 // son "no-ops" (se escribe el mismo valor) o filas temporales (nombre "ZZ-prueba-permisos-...") que
 // quedan INACTIVAS y se borran al final. Los intentos de borrar algo ajeno apuntan solo a esas filas
 // temporales o al local de prueba, jamás a datos reales de aroma. Al terminar se comprueba que no
-// quedó basura y que todo está como estaba.
+// quedó basura (filas ni archivos de Storage, que usan el mismo prefijo) y que todo está como estaba.
 import { createClient } from '@supabase/supabase-js'
+import sharp from 'sharp'
 
 const { VITE_SUPABASE_URL: url, VITE_SUPABASE_ANON_KEY: clave } = process.env
 const credenciales = {
@@ -41,6 +43,8 @@ const PNG_MINIMO = Uint8Array.from(
   atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='),
   (c) => c.charCodeAt(0),
 )
+
+const WEBP_MINIMO = new Uint8Array(await sharp({ create: { width: 8, height: 10, channels: 3, background: '#b6784f' } }).webp().toBuffer())
 
 const crear = () => createClient(url, clave, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
 const anon = crear()
@@ -70,7 +74,7 @@ async function contar(cliente, tabla, filtro) {
   return r.count
 }
 
-const contexto = { aroma: null, prueba: null, antes: null, fotoCategorias: null, categoriasAntes: null }
+const contexto = { aroma: null, prueba: null, antes: null, fotoCategorias: null, categoriasAntes: null, fotoProductos: null, productosAntes: null, archivosAntes: null }
 const creadas = { aroma: { categorias: [], productos: [] }, prueba: { categorias: [], productos: [] }, archivos: [] }
 
 async function limpiarTemporales() {
@@ -87,8 +91,30 @@ async function limpiarTemporales() {
     if (r.error) errores.push(`archivo ${ruta}: ${r.error.message}`)
   }
   creadas.archivos.length = 0
+  // Restos de archivos de prueba de cualquier corrida (también si se cortó antes de anotarlos).
+  for (const [cliente, localId] of [[c1, contexto.aroma?.id], [c2, contexto.prueba?.id]]) {
+    if (!localId) continue
+    const restos = await archivosDePrueba(cliente, localId)
+    if (restos.length) {
+      const r = await cliente.storage.from('imagenes').remove(restos)
+      if (r.error) errores.push(`archivos de ${localId}: ${r.error.message}`)
+    }
+  }
   return errores
 }
+
+/** Todos los archivos de la carpeta de un local (raíz y productos/). */
+async function archivosDe(cliente, localId) {
+  const salida = []
+  for (const carpeta of [localId, `${localId}/productos`]) {
+    const r = await cliente.storage.from('imagenes').list(carpeta, { limit: 1000 })
+    if (r.error) throw new Error(`No se pudo listar Storage: ${r.error.message}`)
+    // Las "carpetas" vienen sin id.
+    salida.push(...r.data.filter((o) => o.id).map((o) => `${carpeta}/${o.name}`))
+  }
+  return salida.sort()
+}
+const archivosDePrueba = async (cliente, localId) => (await archivosDe(cliente, localId)).filter((ruta) => ruta.split('/').pop().startsWith(PREFIJO))
 
 async function entrar(cliente, [email, password], nombre) {
   const { data, error } = await cliente.auth.signInWithPassword({ email, password })
@@ -133,6 +159,15 @@ try {
   }
   contexto.fotoCategorias = fotoCategorias
   contexto.categoriasAntes = await fotoCategorias()
+  const fotoProductos = async () => {
+    const r = await c1.from('productos').select('*').eq('local_id', aroma.id).not('nombre', 'like', `${PREFIJO}%`).order('id')
+    if (r.error) throw new Error(`No se pudieron leer los productos de aroma: ${r.error.message}`)
+    return JSON.stringify(r.data)
+  }
+  contexto.fotoProductos = fotoProductos
+  contexto.productosAntes = await fotoProductos()
+  await limpiarTemporales() // ahora con los ids: también limpia archivos de corridas anteriores
+  contexto.archivosAntes = JSON.stringify(await archivosDe(c1, aroma.id))
 
   // ═══ USUARIO 1: owner de aroma ═══════════════════════════════
   seccion('Usuario 1 (owner de aroma): lo suyo')
@@ -341,6 +376,178 @@ try {
   if (segunda) await c1.from('categorias').delete().eq('id', segunda)
   for (const categoria of originalAroma) await c1.from('categorias').update({ orden: categoria.orden }).eq('id', categoria.id)
 
+  // ═══ PRODUCTOS (Tarea 10) ════════════════════════════════════
+  seccion('Productos: usuario 1 en aroma (crear, editar, borrar)')
+  const catProd = (await c1.from('categorias').insert({ local_id: aroma.id, nombre: `${PREFIJO}productos`, activa: false, orden: 997 }).select('id')).data?.[0]?.id
+  ver(Boolean(catProd), 'Categoría temporal para las pruebas de productos')
+  const nuevoProducto = (extra = {}) => ({ local_id: aroma.id, categoria_id: catProd, nombre: `${PREFIJO}p`, precio: 100, disponible: false, ...extra })
+  r = await c1.from('productos').insert(nuevoProducto({ nombre: `${PREFIJO}completo`, descripcion: 'prueba', precio: 1500.5, etiquetas: ['vegano'], variantes: [{ nombre: 'Chico', precio: 1500.5 }], orden: 1 })).select('*')
+  const completo = r.data?.[0]?.id
+  ver(permitida(r) && Number(r.data[0].precio) === 1500.5, 'Crea un producto con todos los campos', msgOk(r))
+  r = await c1.from('productos').update({ nombre: `${PREFIJO}editado`, precio: 2000, disponible: true, destacado: true, variantes: [] }).eq('id', completo ?? UUID_INEXISTENTE).select('*')
+  ver(permitida(r) && r.data[0].destacado === true, 'Edita nombre, precio, disponible y destacado (categoría oculta: no se ve en el menú)', msgOk(r))
+
+  seccion('Productos: límites de la base (supabase/10-admin-productos.sql)')
+  const rechazos = {
+    'nombre de 61 caracteres': { nombre: PREFIJO.padEnd(61, 'x') },
+    'nombre de solo espacios': { nombre: '    ' },
+    'precio negativo': { precio: -1 },
+    'precio "NaN"': { precio: 'NaN' },
+    '5 variantes (máximo 4)': { variantes: Array.from({ length: 5 }, (_, i) => ({ nombre: `V${i}`, precio: 1 })) },
+  }
+  for (const [caso, cambio] of Object.entries(rechazos)) {
+    r = await c1.from('productos').insert(nuevoProducto(cambio)).select('id')
+    ver(r.error?.code === '23514', `La base rechaza: ${caso}`, r.error ? msg(r) : 'SE GUARDÓ')
+    // Si entró (no debía), se borra ya: puede no llevar el prefijo.
+    if (r.data?.[0]?.id) await c1.from('productos').delete().eq('id', r.data[0].id)
+  }
+  r = await c1.from('productos').insert(nuevoProducto({ nombre: PREFIJO.padEnd(60, 'x') })).select('id')
+  ver(permitida(r), 'Acepta un nombre de exactamente 60 caracteres', msgOk(r))
+  if (r.data?.[0]?.id) await c1.from('productos').delete().eq('id', r.data[0].id)
+  r = await c1.from('categorias').insert({ local_id: aroma.id, nombre: PREFIJO.padEnd(61, 'x'), activa: false }).select('id')
+  ver(r.error?.code === '23514', 'La base rechaza una categoría con nombre de 61 caracteres', r.error ? msg(r) : 'SE GUARDÓ')
+  if (r.data?.[0]?.id) await c1.from('categorias').delete().eq('id', r.data[0].id)
+
+  seccion('Productos: aislamiento entre locales')
+  r = await c1.from('productos').insert(nuevoProducto({ categoria_id: pruebaCats[0].id })).select('id')
+  ver(r.error?.code === '23503', 'categoria_id de otro local: rechazado al crear', msg(r))
+  r = await c1.from('productos').update({ categoria_id: pruebaCats[0].id }).eq('id', completo ?? UUID_INEXISTENTE).select('id')
+  ver(r.error?.code === '23503', 'categoria_id de otro local: rechazado al editar', msg(r))
+  r = await c1.from('productos').update({ local_id: pruebaPorU2.id, categoria_id: pruebaCats[0].id }).eq('id', completo ?? UUID_INEXISTENTE).select('id')
+  ver(bloqueada(r), 'Usuario 1 NO puede mover un producto suyo al local de prueba', msg(r))
+  r = await c1.from('productos').upsert({ ...nuevoProducto(), id: pruebaProds[0].id }).select('id')
+  ver(bloqueada(r), 'Usuario 1 NO puede apropiarse de un producto ajeno con upsert (mismo id)', msg(r))
+  for (const cambio of [{ disponible: false }, { destacado: true }, { precio: 1 }, { imagen_url: null }]) {
+    r = await c2.from('productos').update(cambio).eq('id', completo ?? UUID_INEXISTENTE).select('id')
+    ver(bloqueada(r), `Usuario 2 NO puede cambiar ${Object.keys(cambio)[0]} de un producto de aroma`, msg(r))
+  }
+  r = await anon.from('productos').update({ disponible: false }).eq('id', completo ?? UUID_INEXISTENTE).select('id')
+  ver(bloqueada(r), 'Un anónimo NO puede editar un producto de aroma', msg(r))
+  r = await anon.from('productos').insert(nuevoProducto()).select('id')
+  ver(bloqueada(r), 'Un anónimo NO puede crear productos', msg(r))
+
+  seccion('Reordenar productos (función reordenar_productos)')
+  const extra = []
+  for (const orden of [2, 3]) {
+    const alta = await c1.from('productos').insert(nuevoProducto({ nombre: `${PREFIJO}orden${orden}`, orden })).select('id')
+    if (alta.data?.[0]?.id) extra.push(alta.data[0].id)
+  }
+  const ordenProductos = async (cliente, categoriaId) => {
+    const q = await cliente.from('productos').select('id, orden').eq('categoria_id', categoriaId).order('orden').order('id')
+    if (q.error) throw new Error(`No se pudo leer el orden: ${q.error.message}`)
+    return q.data
+  }
+  const pedido = [extra[1], completo, extra[0]]
+  const reordenar = (cliente, localId, categoriaId, ids) => cliente.rpc('reordenar_productos', { p_local_id: localId, p_categoria_id: categoriaId, p_ids: ids })
+  const primera = await reordenar(c1, aroma.id, catProd, pedido)
+  ver(!primera.error, 'Usuario 1 reordena los productos de una categoría suya', primera.error ? (primera.error.code === 'PGRST202' ? 'la función no existe todavía: corré supabase/10-admin-productos.sql' : msg(primera)) : 'ok')
+  // Sin la función, las pruebas de "NO puede" pasarían solas: solo valen si existe.
+  if (!primera.error) {
+    const guardado = await ordenProductos(c1, catProd)
+    ver(guardado.map((p) => p.id).join() === pedido.join() && guardado.map((p) => p.orden).join() === '1,2,3', 'Queda exactamente el orden pedido (1, 2, 3)')
+    const intacto = async () => JSON.stringify(await ordenProductos(c1, catProd)) === JSON.stringify(guardado)
+    const real = (await c1.from('productos').select('id').eq('local_id', aroma.id).not('nombre', 'like', `${PREFIJO}%`).limit(1)).data[0].id
+    const invalidas = {
+      'lista incompleta': pedido.slice(1),
+      'ids repetidos': [pedido[0], pedido[0], pedido[1]],
+      'un id de otro local': [pedido[0], pedido[1], pruebaProds[0].id],
+      'un id de otra categoría del mismo local': [pedido[0], pedido[1], real],
+      'con un id de más': [...pedido, real],
+      'lista vacía': [],
+    }
+    for (const [caso, ids] of Object.entries(invalidas)) {
+      const x = await reordenar(c1, aroma.id, catProd, ids)
+      ver(x.error?.code === '22023' && (await intacto()), `Rechazada y nada cambia: ${caso}`, msg(x))
+    }
+    let x = await reordenar(c1, aroma.id, pruebaCats[0].id, [pruebaProds[0].id])
+    ver(x.error?.code === '22023', 'Categoría de otro local con mi local_id: rechazada', msg(x))
+    x = await reordenar(c1, pruebaPorU2.id, pruebaCats[0].id, [pruebaProds[0].id])
+    ver(x.error?.code === '42501', 'Usuario 1 NO puede reordenar el local de prueba', msg(x))
+    x = await reordenar(c2, aroma.id, catProd, [...pedido].reverse())
+    ver(x.error?.code === '42501' && (await intacto()), 'Usuario 2 NO puede reordenar aroma', msg(x))
+    x = await reordenar(anon, aroma.id, catProd, [...pedido].reverse())
+    ver(x.error?.code === '42501' && (await intacto()), 'Un anónimo NO puede ejecutar la función', msg(x))
+    const suyos = catTemp2 ? (await ordenProductos(c2, catTemp2)).map((p) => p.id) : []
+    x = await reordenar(c2, pruebaPorU2.id, catTemp2, suyos)
+    ver(!x.error, 'Usuario 2 reordena en su propio local', x.error ? msg(x) : 'ok')
+  }
+
+  r = await c1.from('productos').delete().eq('id', completo ?? UUID_INEXISTENTE).select('id')
+  ver(permitida(r), 'Usuario 1 borra su producto', msgOk(r))
+
+  // ═══ FOTOS DE PRODUCTOS EN STORAGE ═══════════════════════════
+  seccion('Fotos: <local_id>/productos/ (subir, leer y borrar)')
+  const imagenes = (cliente) => cliente.storage.from('imagenes')
+  const duenoDe = (ruta) => (ruta.startsWith(pruebaPorU2.id) ? c2 : c1)
+  const subir = async (cliente, ruta, bytes = WEBP_MINIMO, contentType = 'image/webp', opciones = {}) => {
+    const x = await imagenes(cliente).upload(ruta, new Blob([bytes], { type: contentType }), { contentType, ...opciones })
+    // Si entra algo (deba o no), queda anotado para borrarlo.
+    if (!x.error) creadas.archivos.push([duenoDe(ruta), ruta])
+    return x
+  }
+  const existe = async (ruta) => (await archivosDe(duenoDe(ruta), ruta.split('/')[0])).includes(ruta)
+  const foto480 = `${aroma.id}/productos/${PREFIJO}foto-480.webp`
+  const foto240 = `${aroma.id}/productos/${PREFIJO}foto-240.webp`
+  let s1 = await subir(c1, foto480, WEBP_MINIMO, 'image/webp', { cacheControl: '31536000' })
+  const s2 = await subir(c1, foto240, WEBP_MINIMO, 'image/webp', { cacheControl: '31536000' })
+  ver(!s1.error && !s2.error, 'Usuario 1 sube las dos versiones a la carpeta de aroma', s1.error?.message ?? s2.error?.message ?? 'subidas')
+  const publica = await fetch(imagenes(anon).getPublicUrl(foto480).data.publicUrl)
+  const cache = publica.headers.get('cache-control') ?? ''
+  ver(publica.status === 200 && publica.headers.get('content-type') === 'image/webp', 'La URL pública la entrega como image/webp', `${publica.status} ${publica.headers.get('content-type')}`)
+  ver(cache.includes('max-age=31536000'), 'Con caché larga (un año)', cache)
+  s1 = await subir(c1, foto480)
+  ver(Boolean(s1.error), 'Sin upsert no se puede pisar un archivo existente', s1.error?.message ?? 'SE PISÓ')
+  s1 = await subir(c1, `${aroma.id}/productos/${PREFIJO}jpg-480.jpg`, WEBP_MINIMO, 'image/jpeg')
+  ver(!s1.error, 'Acepta image/jpeg (respaldo para navegadores sin WebP)', s1.error?.message ?? 'subida')
+
+  seccion('Fotos: lo que el bucket debe rechazar')
+  for (const tipo of ['text/plain', 'image/gif', 'image/svg+xml', 'application/octet-stream', 'text/html']) {
+    const x = await subir(c1, `${aroma.id}/productos/${PREFIJO}tipo-${tipo.replace(/[^a-z]/g, '')}`, WEBP_MINIMO, tipo)
+    ver(Boolean(x.error), `Tipo no permitido: ${tipo}`, x.error?.message ?? 'SE SUBIÓ')
+  }
+  s1 = await subir(c1, `${aroma.id}/productos/${PREFIJO}pesado-480.webp`, new Uint8Array(2 * 1024 * 1024 + 1024), 'image/webp')
+  ver(Boolean(s1.error), 'Archivo de más de 2 MB: rechazado', s1.error?.message ?? 'SE SUBIÓ')
+  s1 = await subir(c1, `${aroma.id}/productos/${PREFIJO}disfrazado-480.webp`, new TextEncoder().encode('esto no es una imagen'), 'image/webp')
+  console.log(`NOTA   Un texto declarado como image/webp ${s1.error ? 'se RECHAZA: el bucket revisa el contenido' : 'se ACEPTA: el bucket mira el tipo declarado, no el contenido'}.`)
+
+  seccion('Fotos: nadie escribe fuera de su carpeta')
+  s1 = await subir(c1, `${pruebaPorU2.id}/productos/${PREFIJO}ajena-480.webp`)
+  ver(Boolean(s1.error), 'Usuario 1 NO puede subir a local-prueba/productos', s1.error?.message ?? 'SE SUBIÓ')
+  s1 = await subir(c1, `${PREFIJO}en-la-raiz.webp`)
+  ver(Boolean(s1.error), 'Usuario 1 NO puede subir a la raíz del bucket', s1.error?.message ?? 'SE SUBIÓ')
+  s1 = await imagenes(c1).upload(`${aroma.id}/../${pruebaPorU2.id}/productos/${PREFIJO}salto-480.webp`, new Blob([WEBP_MINIMO], { type: 'image/webp' }), { contentType: 'image/webp' })
+  const salto = (await archivosDe(c2, pruebaPorU2.id)).filter((x) => x.includes(`${PREFIJO}salto`))
+  if (!s1.error) creadas.archivos.push([c1, s1.data.path])
+  ver(salto.length === 0, 'Una ruta con ".." no termina en la carpeta ajena', s1.error?.message ?? 'quedó dentro de la carpeta propia')
+  let movido = await imagenes(c1).move(foto240, `${pruebaPorU2.id}/productos/${PREFIJO}movida-240.webp`)
+  ver(Boolean(movido.error) && (await existe(foto240)), 'Usuario 1 NO puede mover un archivo suyo a la carpeta ajena', movido.error?.message ?? 'SE MOVIÓ')
+  s1 = await subir(c2, `${aroma.id}/productos/${PREFIJO}intrusa-480.webp`)
+  ver(Boolean(s1.error), 'Usuario 2 NO puede subir a aroma/productos', s1.error?.message ?? 'SE SUBIÓ')
+  s1 = await imagenes(c2).upload(foto480, new Blob([PNG_MINIMO], { type: 'image/png' }), { contentType: 'image/png', upsert: true })
+  ver(Boolean(s1.error), 'Usuario 2 NO puede reemplazar una foto de aroma', s1.error?.message ?? 'SE REEMPLAZÓ')
+  await imagenes(c2).remove([foto480])
+  ver(await existe(foto480), 'Usuario 2 NO puede borrar una foto de aroma (sigue ahí)')
+  const copiada = `${pruebaPorU2.id}/productos/${PREFIJO}copiada-480.webp`
+  movido = await imagenes(c2).copy(foto480, copiada)
+  if (!movido.error) creadas.archivos.push([c2, copiada])
+  ver(Boolean(movido.error), 'Usuario 2 NO puede copiar una foto de aroma con la API', movido.error?.message ?? 'SE COPIÓ')
+  const listaAjena = await imagenes(c2).list(`${aroma.id}/productos`)
+  ver(Boolean(listaAjena.error) || listaAjena.data.length === 0, 'Usuario 2 NO puede listar las fotos de aroma', `${listaAjena.data?.length ?? 0} archivo(s)`)
+  s1 = await subir(anon, `${aroma.id}/productos/${PREFIJO}anon-480.webp`)
+  ver(Boolean(s1.error), 'Un anónimo NO puede subir fotos', s1.error?.message ?? 'SE SUBIÓ')
+  await imagenes(anon).remove([foto480])
+  ver(await existe(foto480), 'Un anónimo NO puede borrar fotos (sigue ahí)')
+  const listaAnon = await imagenes(anon).list(`${aroma.id}/productos`)
+  ver(Boolean(listaAnon.error) || listaAnon.data.length === 0, 'Un anónimo NO puede listar el bucket', `${listaAnon.data?.length ?? 0} archivo(s)`)
+  const propia = `${pruebaPorU2.id}/productos/${PREFIJO}propia-480.webp`
+  s1 = await subir(c2, propia)
+  ver(!s1.error, 'Usuario 2 sube a su propia carpeta', s1.error?.message ?? 'subida')
+  await imagenes(c1).remove([propia])
+  ver(await existe(propia), 'Usuario 1 NO puede borrar una foto del local de prueba')
+
+  const borrado = await imagenes(c1).remove([foto480, foto240])
+  ver(!borrado.error && borrado.data.length === 2 && !(await existe(foto480)) && !(await existe(foto240)), 'Usuario 1 borra sus dos versiones', borrado.error?.message ?? `${borrado.data.length} borradas`)
+
   // ═══ ANÓNIMO ═════════════════════════════════════════════════
   seccion('Anónimo (sin sesión): sigue sin poder escribir en ninguna tabla')
   const falsos = {
@@ -414,6 +621,11 @@ try {
       ver(despues.aromaCats === antes.aroma.cats && despues.aromaProds === antes.aroma.prods, 'aroma quedó con la misma cantidad de categorías y productos', `${despues.aromaCats} cat. / ${despues.aromaProds} prod. (antes: ${antes.aroma.cats} / ${antes.aroma.prods})`)
       ver(despues.pruebaCats === antes.prueba.cats && despues.pruebaProds === antes.prueba.prods, 'local-prueba quedó con la misma cantidad de categorías y productos', `${despues.pruebaCats} cat. / ${despues.pruebaProds} prod. (antes: ${antes.prueba.cats} / ${antes.prueba.prods})`)
       ver((await contexto.fotoCategorias()) === contexto.categoriasAntes, 'Las categorías reales de aroma quedaron idénticas (nombre, orden, visibilidad y adicionales)')
+      ver((await contexto.fotoProductos()) === contexto.productosAntes, 'Los productos reales de aroma quedaron idénticos (todas las columnas)')
+      const sobrantes = [...(await archivosDePrueba(c1, aroma.id)), ...(await archivosDePrueba(c2, prueba.id))]
+      ver(sobrantes.length === 0, 'No quedó ningún archivo de prueba en Storage', sobrantes.join(', '))
+      const archivosDespues = await archivosDe(c1, aroma.id)
+      ver(JSON.stringify(archivosDespues) === contexto.archivosAntes, 'La carpeta de aroma en Storage quedó como estaba', `${archivosDespues.length} archivo(s)`)
       const estado = await c2.from('locales').select('activo, descripcion, nombre').eq('id', prueba.id).maybeSingle()
       ver(estado.data?.activo === false && estado.data?.nombre === prueba.nombre, 'El local de prueba sigue inactivo y con su nombre', estado.error ? msg(estado) : '')
       const estadoAroma = await anon.from('locales').select('activo, nombre, descripcion').eq('id', aroma.id).maybeSingle()

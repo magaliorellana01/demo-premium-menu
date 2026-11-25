@@ -5,9 +5,9 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 único proyecto de Supabase (Postgres + Auth + Storage) y datos separados por local (multi-tenant).
 
 - Menú público: `/:slug` (ej. `/aroma`)
-- Panel de administración: `/admin` (login, permisos y administración de categorías; productos y ajustes llegan en las próximas tareas)
+- Panel de administración: `/admin` (login, permisos y administración de categorías y productos con fotos; ajustes llega en una próxima tarea)
 
-Estado: **Tarea 9** (panel con la estética de la marca y administración de categorías). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
+Estado: **Tarea 10** (administración de productos con subida de fotos). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
 
 ## Cómo correrlo
 
@@ -75,7 +75,8 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
     que debe venir vacía. Sin este paso el menú funciona igual, solo que sin variantes ni adicionales.
 12. Antes del panel: crear los usuarios de prueba y correr `supabase/08-admin-base.sql` (ver "Panel de administración" más abajo).
 13. Para reordenar categorías desde el panel: correr `supabase/09-admin-categorias.sql` (ver "Categorías" más abajo).
-14. `npm run dev` y abrir `/aroma`.
+14. Para administrar productos: correr `supabase/10-admin-productos.sql` (ver "Productos" más abajo).
+15. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -111,7 +112,7 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs   Pruebas de lógica pura (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs   Pruebas de lógica pura (npm run probar)
   verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
@@ -139,6 +140,7 @@ supabase/
   07-variantes-adicionales.sql   Variantes de producto, adicionales por categoría, restricciones y ejemplos
   08-admin-base.sql     Panel: slug "login" reservado, local de prueba inactivo y membresías de los usuarios de prueba
   09-admin-categorias.sql   Función para reordenar categorías de forma atómica
+  10-admin-productos.sql    Límites de nombres y precio, y función para reordenar productos
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -356,6 +358,54 @@ Componentes compartidos en `src/admin/ui/`: `Boton`, `Campo`, `Tarjeta`, `Alerta
 la llama sea miembro o admin, exige la lista exacta de categorías del local, bloquea las filas mientras reordena y solo la pueden ejecutar usuarios
 con sesión. No cambia tablas ni políticas. Su consulta de control debe dar `security_definer = false`, `anon_puede = false` y `con_sesion_puede = true`.
 
+### Productos (`/admin/:slug/productos`)
+
+- **Lista** agrupada por categoría, en el orden del menú, con miniatura, precio (o "desde $X") y etiquetas. Búsqueda por nombre y filtros por
+  categoría y estado (se guardan en la URL). Estados de carga, vacío (si no hay categorías, enlaza a Categorías) y error con "Reintentar".
+- **Acciones rápidas** en cada fila, sin abrir el formulario: "Disponible / Agotado" y "Destacado".
+- **Reordenar** dentro de la categoría con subir y bajar (función `reordenar_productos`, una sola transacción). Con búsqueda o filtro de estado
+  los botones se ocultan, porque se verían huecos.
+- **Alta y edición** en pantalla propia (`/productos/nuevo` y `/productos/:id`): nombre (máx. 60), descripción (máx. 200, límite solo de la
+  interfaz), precio ("1.500" o "1500,50"), categoría, disponible, destacado, etiquetas y hasta 4 opciones. Con opciones, el precio principal
+  es el de la más barata. Los nuevos van al final de su categoría. Si guardar falla, no se pierde lo escrito.
+- **Eliminar** con confirmación en línea; borra también las fotos subidas desde el panel.
+
+#### Fotos
+
+Todo se prepara **en el navegador**, sin dependencias ni transformaciones de pago de Supabase:
+
+- Entrada: JPG, PNG o WebP de hasta 10 MB (en el iPhone, el selector entrega JPG). Se respeta la orientación EXIF y se recorta al centro en 4:5,
+  con vista previa antes de guardar.
+- Salida: **480x600** (objetivo: hasta 80 kB) y **240x300**. El original nunca se sube. Una imagen con muchísima textura puede pasar los 80 kB:
+  no se baja de la calidad 0,5.
+- **WebP, con respaldo en JPEG:** algunos navegadores (Safari) no saben generar WebP desde un canvas y devuelven un PNG sin avisar. Se comprueba
+  el tipo real y, si no es WebP, las dos versiones se generan en JPEG.
+- Ruta: `<local_id>/productos/<nombre>-<único>-480.webp` (o `.jpg`) y `-240`, con caché de un año. Cada subida usa un nombre nuevo.
+- **Orden seguro** (`src/admin/guardarProducto.js`): subir lo nuevo, actualizar la base y recién ahí borrar lo viejo. Si no se puede saber si la
+  base guardó, **no se borra nada**: es preferible un archivo de más (se informa en pantalla) que un producto sin foto.
+
+**Qué guarda `productos.imagen_url`** (siempre la versión de 480 px; la de 240 se deduce por el nombre):
+
+| Origen | Valor |
+| --- | --- |
+| Fotos del demo | ruta local: `/locales/aroma/productos/espresso-480.webp` |
+| Fotos del panel | URL pública de Storage: `<SUPABASE_URL>/storage/v1/object/public/imagenes/<local_id>/productos/…-480.webp` |
+
+Así el menú público arma el `srcset` igual para las dos, sin saber de dónde vienen. El panel solo borra archivos de la segunda forma que estén en
+la carpeta del propio local y que ningún otro producto use. **Si algún día se cambia de proyecto de Supabase**, hay que copiar los archivos y
+reemplazar la URL base en `imagen_url`.
+
+**Límites de Storage:** el bucket rechaza otros tipos y archivos de más de 2 MB, y la política solo deja escribir en `<local_id>/`. Ojo: el bucket
+mira el **tipo declarado**, no el contenido; un usuario con sesión podría subir a su propia carpeta otra cosa declarada como imagen.
+
+**Archivos huérfanos:** si se cierra la pestaña o se corta la conexión en medio de un guardado pueden quedar fotos sin usar. Al final de
+`supabase/10-admin-productos.sql` hay una consulta (comentada) que las lista.
+
+**`supabase/10-admin-productos.sql`:** primero comprueba que los datos existentes cumplan (si no, se detiene sin aplicar nada); agrega nombres de
+1 a 60 caracteres y precio sin `NaN`; y crea `reordenar_productos(local, categoría, ids)` (`SECURITY INVOKER`, lista exacta, filas bloqueadas, solo
+con sesión). Su fila de control debe dar `security_definer = false`, `anon_puede = false`, `con_sesion_puede = true`, `limites = 6`,
+`bucket_max_bytes = 2097152`, `politicas_storage = 1`, `aroma_categorias = 3` y `aroma_productos = 18`.
+
 ### Configuración manual en Supabase (una sola vez)
 
 1. **Desactivar el registro público:** *Authentication > Sign In / Providers* (en algunos proyectos: *Authentication > Providers > Email*) y apagar
@@ -394,8 +444,9 @@ con sesión. No cambia tablas ni políticas. Su consulta de control debe dar `se
 4. `npm run verificar:permisos` comprueba contra Supabase real, con la clave anon: que el usuario 1 lee y escribe en su local; que no puede modificar ni crear nada
    en `local-prueba`; que el usuario 2 no puede tocar `aroma`; que un anónimo no puede escribir en ninguna tabla; que las imágenes solo se suben a la carpeta del
    propio local; las categorías (crear, editar, borrar, adicionales inválidos, borrado con productos y reordenar con la función 09, incluidos los
-   intentos que deben fallar); y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
-   inactivas y escribe valores idénticos a los que ya había) y al final verifica que todo quedó como estaba.
+   intentos que deben fallar); los productos (crear, editar, borrar, límites de la base, categoría de otro local y reordenar con la función 10);
+   las fotos en Storage (tipos y tamaño no permitidos, caché y que nadie escriba, borre ni liste carpetas ajenas); y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
+   inactivas, archivos con el mismo prefijo y escribe valores idénticos a los que ya había) y al final verifica que todo quedó como estaba.
 5. `npm run probar` corre además las pruebas de lógica pura de permisos y del formulario de ingreso (`scripts/probar-permisos.mjs`), sin red.
 
 ## Medir el rendimiento (Lighthouse)
@@ -436,7 +487,7 @@ con el foco `[x, y]` de 0 a 1). Para otro local: copiar el JSON, ajustar los nom
 Si una imagen no llega al objetivo sin perder calidad (mínimo q62), el script lo avisa en lugar de degradarla.
 
 En la base, `imagen_url` guarda la versión de 480 px (`.../espresso-480.webp`) y `src/lib/imagenes.js` deduce la de 240 px
-para el `srcset`. Una imagen que no siga ese nombre se usa tal cual. Si en una corrida cambian los anchos, el script borra
+para el `srcset` (también con `.jpg`). Una imagen que no siga ese nombre se usa tal cual. Si en una corrida cambian los anchos, el script borra
 las versiones en desuso de las fotos que procesa.
 
 ## Íconos, web app y vista previa (acabados de marca)

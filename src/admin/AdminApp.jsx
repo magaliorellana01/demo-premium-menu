@@ -4,6 +4,8 @@ import InicioAdmin from './InicioAdmin'
 import LocalLayout from './LocalLayout'
 import LoginPage from './LoginPage'
 import PaginaCategorias from './PaginaCategorias'
+import PaginaProducto from './PaginaProducto'
+import PaginaProductos from './PaginaProductos'
 import PantallaAviso from './PantallaAviso'
 import Proximamente from './Proximamente'
 import Resumen from './Resumen'
@@ -51,7 +53,9 @@ export default function AdminApp() {
               <Route path=":slug" element={<LocalLayout />}>
                 <Route index element={<Resumen />} />
                 <Route path="categorias" element={<PaginaCategorias />} />
-                <Route path="productos" element={<Proximamente titulo="Productos" />} />
+                <Route path="productos" element={<PaginaProductos />} />
+                <Route path="productos/nuevo" element={<PaginaProducto />} />
+                <Route path="productos/:productoId" element={<PaginaProducto />} />
                 <Route path="ajustes" element={<Proximamente titulo="Ajustes" soloDueno />} />
                 <Route path="*" element={<PaginaNoEncontrada />} />
               </Route>

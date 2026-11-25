@@ -1,15 +1,15 @@
 import { useId } from 'react'
 
-// Etiqueta visible + input o textarea + ayuda + error, enlazados con aria-describedby y
+// Etiqueta visible + input, textarea o select (con `lista`: las opciones van como hijos) + ayuda + error, enlazados con aria-describedby y
 // aria-invalid. `accesorio` es un botón que se ubica dentro del campo (ej. ver contraseña).
 // El resto de las props van al control (incluido `ref`).
-export default function Campo({ etiqueta, ayuda, error, multilinea = false, accesorio = null, id: idPropio, ...props }) {
+export default function Campo({ etiqueta, ayuda, error, multilinea = false, lista = false, accesorio = null, id: idPropio, ...props }) {
   const idAutomatico = useId()
   const id = idPropio ?? idAutomatico
   const idAyuda = ayuda ? `${id}-ayuda` : null
   const idError = error ? `${id}-error` : null
   const descripciones = [idAyuda, idError].filter(Boolean).join(' ') || undefined
-  const Control = multilinea ? 'textarea' : 'input'
+  const Control = multilinea ? 'textarea' : lista ? 'select' : 'input'
 
   return (
     <div className="ui-campo">

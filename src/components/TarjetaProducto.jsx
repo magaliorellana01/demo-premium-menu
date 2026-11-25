@@ -1,7 +1,8 @@
 import { etiquetasDeProducto } from '../lib/etiquetas'
-import { formatearPrecio } from '../lib/formato'
 import { imagenProducto, PROPORCION_PRODUCTO } from '../lib/imagenes'
+import { resumenPrecio } from '../lib/precios'
 import { useAparecer } from '../lib/useAparecer'
+import Precio from './Precio'
 
 // Ancho real de la imagen según la pantalla (debe coincidir con menu.css), para
 // que el navegador elija la de 240 o la de 480 px: la más chica que alcance.
@@ -9,12 +10,16 @@ const TAMANOS = '(min-width: 1024px) 8rem, (min-width: 768px) 7.5rem, 6.5rem'
 const TAMANOS_COMPACTA = '(min-width: 768px) 11rem, 8rem'
 
 // Contenido estático (no es un botón ni un enlace).
-// compacta: versión vertical para la fila de destacados (imagen, nombre y precio).
+// compacta: versión vertical para la fila de destacados (imagen, nombre y precio; con variantes de
+// distinto precio, "desde $X").
+// Con variantes, la tarjeta normal muestra cada una con su precio en lugar de un único precio.
 // prioridad: la imagen se ve apenas abre la página, así que no se difiere su carga.
 export default function TarjetaProducto({ producto, compacta = false, prioridad = false }) {
   const ref = useAparecer()
   const imagen = imagenProducto(producto.imagen_url)
   const etiquetas = etiquetasDeProducto(producto)
+  const { variantes, desde, hayRango } = resumenPrecio(producto)
+  const listaDeVariantes = !compacta && variantes.length > 0
 
   const clases = ['tarjeta']
   if (compacta) clases.push('tarjeta--compacta')
@@ -42,10 +47,28 @@ export default function TarjetaProducto({ producto, compacta = false, prioridad 
       <div className="tarjeta__cuerpo">
         <div className="tarjeta__cabecera">
           <h3 className="tarjeta__nombre">{producto.nombre}</h3>
-          <p className="tarjeta__precio">{formatearPrecio(producto.precio)}</p>
+          {!listaDeVariantes && desde !== null && (
+            <p className="tarjeta__precio">
+              <Precio valor={desde} desde={compacta && hayRango} />
+            </p>
+          )}
         </div>
 
         {!producto.disponible && <p className="tarjeta__aviso">No disponible</p>}
+
+        {listaDeVariantes && (
+          <ul className="variantes" role="list" aria-label="Opciones y precios">
+            {variantes.map((variante, indice) => (
+              <li key={`${indice}-${variante.nombre}`} className="variante">
+                <span className="variante__nombre">{variante.nombre}</span>
+                <span className="variante__precio">
+                  <span className="solo-lectores">, </span>
+                  <Precio valor={variante.precio} />
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
 
         {!compacta && producto.descripcion && <p className="tarjeta__descripcion">{producto.descripcion}</p>}
 

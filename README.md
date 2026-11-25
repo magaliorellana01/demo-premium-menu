@@ -64,7 +64,12 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
     los 18 productos de Aroma. Se puede correr más de una vez (cada corrida deja las etiquetas como figuran en el archivo) y no
     cambia el esquema ni los permisos. Al final devuelve una fila de control (`productos = 18`, `con_etiquetas = 18`) y el
     recuento por etiqueta. Sin este paso el menú funciona igual, solo que sin chips de filtro.
-11. `npm run dev` y abrir `/aroma`.
+11. Pegar y correr `supabase/07-variantes-adicionales.sql`: agrega `productos.variantes` y `categorias.adicionales` (jsonb), sus
+    restricciones y datos de ejemplo de Aroma (variantes en espresso, capuchino, latte y moca; adicionales en Cafés). Se puede correr
+    más de una vez y **no cambia permisos ni políticas RLS**: la lectura anónima está dada por tabla, no por columna, así que las
+    columnas nuevas ya son legibles. Al final devuelve `con_variantes = 5` y `categorias_con_adicionales = 1`, y una segunda consulta
+    que debe venir vacía. Sin este paso el menú funciona igual, solo que sin variantes ni adicionales.
+12. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -100,7 +105,7 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs   Pruebas de horarios, enlaces y búsqueda/filtros (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs   Pruebas de horarios, enlaces, búsqueda/filtros y precios (npm run probar)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
@@ -110,12 +115,13 @@ src/
   lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
                         useCategoriaActiva.js, useAparecer.js, usePausarFueraDePantalla.js, movimiento.js, demo.js,
                         horarios.js (puro), contacto.js (enlaces seguros), visita.js, useAhora.js (reloj por minuto),
-                        etiquetas.js (vocabulario, reutilizable en el panel), filtros.js (búsqueda y filtros, puro), useFiltros.js
+                        etiquetas.js (vocabulario, reutilizable en el panel), filtros.js (búsqueda y filtros, puro), useFiltros.js,
+                        precios.js (formato ARS, variantes y adicionales; límites reutilizables en el panel)
   components/           Carta (arma la página), Portada, Granos, EstadoLocal, Aviso, NavCategorias, Busqueda, Destacados,
-                        SeccionCategoria, TarjetaProducto, Visitanos, PantallaMensaje, Esqueleto y Pie
+                        SeccionCategoria, TarjetaProducto, Precio, Visitanos, PantallaMensaje, Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
   admin/                Panel de administración (más adelante)
-  styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, busqueda.css, visitanos.css, esqueleto.css
+  styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, busqueda.css, precios.css, visitanos.css, esqueleto.css
 supabase/
   schema.sql            Tablas, índices, RLS, políticas, bucket y datos de ejemplo
   02-imagenes.sql       Logo, imágenes y destacados del local aroma (se corre después de schema.sql)
@@ -123,6 +129,7 @@ supabase/
   04-imagenes-480.sql   Migra imagen_url de la versión de 800 px a la de 480 px
   05-info-aviso.sql     Columnas del aviso y datos de contacto/horarios de ejemplo
   06-etiquetas.sql      Etiquetas de ejemplo en los productos de aroma
+  07-variantes-adicionales.sql   Variantes de producto, adicionales por categoría, restricciones y ejemplos
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -233,6 +240,48 @@ de medianoche y cambios de día).
   solo de ejemplo.
 - Limitación conocida: el esqueleto de carga reserva siempre el lugar de la fila de chips; un local que no tenga ninguna etiqueta
   verá un pequeño salto al cargar, porque esa fila no se muestra.
+
+## Variantes de producto y adicionales por categoría
+
+Son información para el cliente: **no hay carrito ni pedidos**, y nada se suma automáticamente.
+
+**Variantes** (`productos.variantes`, jsonb, por defecto `[]`): hasta **4** objetos `{ "nombre", "precio" }`.
+
+```json
+[{ "nombre": "Chico", "precio": 4800 }, { "nombre": "Grande", "precio": 6000 }]
+```
+
+- Con variantes, la tarjeta muestra cada una con su precio (nombre chico arriba, precio abajo; bajan de renglón sin romper el diseño,
+  y un nombre largo se parte dentro de su columna) en lugar de un único precio. Los **destacados** muestran "desde $X" cuando hay
+  variantes con precios distintos; si todas valen lo mismo, el precio a secas.
+- **Regla del precio base:** la columna `productos.precio` sigue siendo obligatoria y, si hay variantes, **debe valer igual que el
+  precio MÁS BAJO de las variantes**. Lo mantiene el panel de administración; la base no lo fuerza con una restricción (obligaría a
+  cambiar precio y variantes siempre en la misma operación). El menú público toma el "desde" de las propias variantes, así que no
+  depende de que coincidan; la segunda consulta de control de `07-variantes-adicionales.sql` lista los que no coinciden.
+- Sin variantes todo funciona como antes.
+
+**Adicionales** (`categorias.adicionales`, jsonb, por defecto `[]`): hasta **8** objetos `{ "nombre", "precio" }`.
+
+```json
+[{ "nombre": "Leche vegetal", "precio": 600 }, { "nombre": "Shot extra", "precio": 800 }]
+```
+
+Se muestran debajo del título de la categoría, en una línea sutil: "Podés sumar: Leche vegetal +$600  Shot extra +$800" (el precio en cobre y en negrita separa un adicional de otro). Con la lista
+vacía no aparece nada. Siguen visibles mientras se busca o se filtra dentro de esa categoría.
+
+**Límites y validación**
+- Máximo 4 variantes por producto y 8 adicionales por categoría; nombres de 1 a 40 caracteres; precios numéricos de 0 a 99.999.999,99.
+  Los valores están en `src/lib/precios.js` (`MAX_VARIANTES`, `MAX_ADICIONALES`, `LARGO_MAX_NOMBRE`, `PRECIO_MAXIMO`) para que el panel valide
+  lo mismo.
+- En la base, la función `public.lista_precios_valida(lista, maximo)` (sin acceso a tablas, `search_path` fijado) respalda dos restricciones
+  CHECK: `productos_variantes_validas` y `categorias_adicionales_validos`.
+- El menú lee los datos de forma **defensiva** (`src/lib/precios.js`): ignora lo inválido (elementos que no son objetos, nombre vacío, precio que
+  no es número o es negativo), corta los nombres a 40 caracteres y se queda con los primeros 4 u 8 válidos. Si no queda ninguna variante válida,
+  muestra el precio base; nunca rompe la página.
+- La búsqueda no mira dentro de las variantes ni de los adicionales.
+
+**Accesibilidad:** el precio visible ("$4.800") está oculto para los lectores de pantalla y se les da en su lugar un texto aparte
+("4.800 pesos", "desde 4.800 pesos", "más 600 pesos"), porque no todos leen bien el signo `$`. Una variante se lee "Chico, 4.800 pesos".
 
 ## Medir el rendimiento (Lighthouse)
 

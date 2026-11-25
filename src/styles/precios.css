@@ -1,0 +1,86 @@
+/* Variantes de producto, "desde" y adicionales de categoría. */
+
+/* "desde" antes del precio (destacados) */
+.precio__desde {
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-regular);
+  color: var(--color-texto-suave);
+}
+
+/* ── Variantes: cada una es una columna (nombre chico arriba, precio abajo) ── */
+/* Se acomodan en fila y bajan de renglón por variante entera; un nombre largo se parte dentro de su columna. */
+.variantes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-2) var(--espacio-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.variante {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.variante__nombre {
+  font-size: var(--texto-xs);
+  line-height: 1.3;
+  color: var(--color-texto-suave);
+  overflow-wrap: anywhere;
+}
+
+.variante__precio {
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tarjeta--no-disponible .variante__precio {
+  color: var(--color-texto-suave);
+}
+
+/* ── Adicionales: una línea sutil bajo el título de la categoría (no es un producto) ── */
+.adicionales {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--espacio-1) var(--espacio-3);
+  margin: calc(-1 * var(--espacio-2)) 0 var(--espacio-4);
+  font-size: var(--texto-sm);
+  color: var(--color-texto-suave);
+}
+
+.adicionales__rotulo {
+  font-weight: var(--peso-fuerte);
+}
+
+.adicionales__lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-1) var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adicional {
+  min-width: 0;
+}
+
+.adicional__precio {
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--color-acento-texto); /* 4,77:1 sobre porcelana */
+}
+
+/* El texto solo para lectores es position: absolute: tiene que tener un ancestro posicionado
+   cercano, si no el scroll horizontal de la fila de destacados no lo recorta y ensancha la página. */
+.tarjeta__precio,
+.variante__precio,
+.adicional {
+  position: relative;
+}

@@ -1,10 +1,3 @@
-const formatoNumero = new Intl.NumberFormat('es-AR', { maximumFractionDigits: 0 })
-
-// 4200 -> "$4.200"
-export function formatearPrecio(valor) {
-  return `$${formatoNumero.format(valor)}`
-}
-
 // "Jugos y licuados" -> "jugos-y-licuados" (para ids y enlaces internos)
 export function slugificar(texto) {
   return texto

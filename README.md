@@ -5,9 +5,9 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 único proyecto de Supabase (Postgres + Auth + Storage) y datos separados por local (multi-tenant).
 
 - Menú público: `/:slug` (ej. `/aroma`)
-- Panel de administración: `/admin` (se construye más adelante)
+- Panel de administración: `/admin` (login, permisos y estructura base; categorías, productos y ajustes llegan en las próximas tareas)
 
-Estado: **Tarea 4** (portada, animación de ambiente y acabados de marca). Todavía no hay contacto del local, buscador, QR ni panel.
+Estado: **Tarea 8** (panel: ingreso, permisos y estructura base). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
 
 ## Cómo correrlo
 
@@ -36,6 +36,10 @@ Ver `.env.example`. Van en `.env` (ignorado por git).
 Vite incorpora estas variables al momento del build: si se cambian, hay que volver a publicar.
 
 **Nunca** uses ni expongas la clave `service_role` en el frontend ni en `.env`: saltea toda la seguridad.
+
+Variables nuevas (solo para `npm run verificar:permisos`, ver "Panel de administración"): `TEST_USER1_EMAIL`, `TEST_USER1_PASSWORD`,
+`TEST_USER2_EMAIL` y `TEST_USER2_PASSWORD`. Son credenciales de usuarios de **prueba**, van solo en `.env` (que no se versiona) y no empiezan
+con `VITE_`, así que Vite nunca las incluye en el sitio publicado.
 La anon key es pública por diseño; lo que protege los datos son las políticas RLS de `supabase/schema.sql`.
 
 ## Crear el proyecto de Supabase
@@ -69,7 +73,8 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
     más de una vez y **no cambia permisos ni políticas RLS**: la lectura anónima está dada por tabla, no por columna, así que las
     columnas nuevas ya son legibles. Al final devuelve `con_variantes = 5` y `categorias_con_adicionales = 1`, y una segunda consulta
     que debe venir vacía. Sin este paso el menú funciona igual, solo que sin variantes ni adicionales.
-12. `npm run dev` y abrir `/aroma`.
+12. Antes del panel: crear los usuarios de prueba y correr `supabase/08-admin-base.sql` (ver "Panel de administración" más abajo).
+13. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -105,7 +110,8 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs   Pruebas de horarios, enlaces, búsqueda/filtros y precios (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs   Pruebas de lógica pura (npm run probar)
+  verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
@@ -120,7 +126,7 @@ src/
   components/           Carta (arma la página), Portada, Granos, EstadoLocal, Aviso, NavCategorias, Busqueda, Destacados,
                         SeccionCategoria, TarjetaProducto, Precio, Visitanos, PantallaMensaje, Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
-  admin/                Panel de administración (más adelante)
+  admin/                Panel de administración (/admin), cargado solo en esas rutas (ver abajo)
   styles/               tokens.css (marca), fuentes.css, base.css, pantalla.css, portada.css, menu.css, busqueda.css, precios.css, visitanos.css, esqueleto.css
 supabase/
   schema.sql            Tablas, índices, RLS, políticas, bucket y datos de ejemplo
@@ -130,6 +136,7 @@ supabase/
   05-info-aviso.sql     Columnas del aviso y datos de contacto/horarios de ejemplo
   06-etiquetas.sql      Etiquetas de ejemplo en los productos de aroma
   07-variantes-adicionales.sql   Variantes de producto, adicionales por categoría, restricciones y ejemplos
+  08-admin-base.sql     Panel: slug "login" reservado, local de prueba inactivo y membresías de los usuarios de prueba
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -282,6 +289,80 @@ vacía no aparece nada. Siguen visibles mientras se busca o se filtra dentro de 
 
 **Accesibilidad:** el precio visible ("$4.800") está oculto para los lectores de pantalla y se les da en su lugar un texto aparte
 ("4.800 pesos", "desde 4.800 pesos", "más 600 pesos"), porque no todos leen bien el signo `$`. Una variante se lee "Chico, 4.800 pesos".
+
+## Panel de administración (`/admin`)
+
+Cada local edita su propio menú desde `/admin`. En esta tarea están el ingreso, los permisos y la estructura; categorías, productos
+y ajustes (hoy "Próximamente") llegan después.
+
+**Rutas**
+- `/admin/login`: ingreso con email y contraseña (sin "olvidé mi contraseña": las contraseñas se resetean desde el dashboard de Supabase).
+- `/admin`: va directo al único local del usuario; si tiene varios, o es admin de OESTACK, muestra un selector.
+- `/admin/:slug`: panel del local con *Inicio* (resumen: estado, cantidad de categorías y productos, enlace al menú público), *Categorías*,
+  *Productos* y *Ajustes*. Se usa bien desde el celular.
+- Todas llevan `<meta name="robots" content="noindex">`. Los slugs `admin` y `login` están reservados (un local no puede llamarse así).
+- Sin sesión, cualquier ruta protegida lleva al login (y vuelve a donde se quería ir). Con sesión pero sin permiso sobre ese local aparece
+  "No tenés acceso a este local", sin revelar si el local existe. Si la sesión vence, se vuelve al login con el aviso "Tu sesión venció".
+
+**Código dividido:** el panel se carga con `React.lazy` solo en `/admin/*`. El cliente completo de Supabase (`@supabase/supabase-js`) y todo lo del
+panel viajan en su propio archivo (~228 kB, ~60 kB comprimido); el menú público sigue usando el cliente liviano (`postgrest-js`) y no lo descarga.
+La carga diferida suma al JS del menú público unos 2,3 kB (menos de 1 kB comprimido) por el mecanismo de Vite. Los estilos del panel
+(`src/admin/admin.css`) viajan dentro de ese mismo archivo.
+
+**La protección de rutas del frontend es solo comodidad. La seguridad real vive en el RLS de la base** (`supabase/schema.sql`): aunque alguien se
+saltee la interfaz, Postgres rechaza lo que no le corresponde. El panel usa solo la clave pública (anon) y actúa siempre como el usuario logueado.
+
+**Reglas de permisos** (iguales en el RLS y en `src/admin/permisos.js`, que es lo que usa la interfaz: `usePermisos(slug)`)
+
+| Rol | Categorías y productos de su local | Datos del local (nombre, horarios, contacto, aviso) | Crear locales y asignar usuarios |
+|---|---|---|---|
+| `editor` | sí | no | no |
+| `owner` (dueño) | sí | sí | no |
+| `admin` (equipo de OESTACK) | sí, en todos los locales | sí, en todos | sí |
+
+Un usuario solo lee sus propias filas de `usuarios_locales` y `admins` (políticas `usuarios_locales_lectura_propia` y `admins_lectura_propia`, que ya
+existían en `schema.sql`). Escribir en esas tablas es solo de admins (`usuarios_locales`) o de nadie por la API (`admins`: se cargan desde el SQL Editor).
+
+### Configuración manual en Supabase (una sola vez)
+
+1. **Desactivar el registro público:** *Authentication > Sign In / Providers* (en algunos proyectos: *Authentication > Providers > Email*) y apagar
+   **Allow new users to sign up**. Así nadie puede crearse una cuenta solo: los usuarios los creamos nosotros.
+2. **Contraseñas:** en la misma sección, subir **Minimum password length** a 12 como mínimo y exigir letras y números (y, si querés, mayúsculas y símbolos).
+   Activar también *Prevent use of leaked passwords* si el plan lo permite.
+3. **Confirmación de email:** como los usuarios se crean a mano, al crearlos se marca **Auto Confirm User** (ver abajo).
+
+### Crear un usuario de cliente (paso a paso)
+
+1. En Supabase: *Authentication > Users > Add user > Create new user*. Poner el email y una contraseña larga, y **tildar "Auto Confirm User"**. Crear.
+2. En *SQL Editor* correr (cambiando el email, el slug del local y, si corresponde, el rol `owner` o `editor`):
+   ```sql
+   insert into public.usuarios_locales (user_id, local_id, rol)
+   select u.id, l.id, 'owner'
+   from auth.users u, public.locales l
+   where u.email = 'cliente@ejemplo.com' and l.slug = 'el-slug-del-local'
+   on conflict (user_id, local_id) do update set rol = excluded.rol;
+   ```
+3. Pasarle al cliente el email y la contraseña por un canal seguro; entra en `/admin/login`.
+4. **Admin de OESTACK** (ve y gestiona todos los locales):
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = 'tu-email@ejemplo.com'
+   on conflict (user_id) do nothing;
+   ```
+5. Resetear una contraseña: *Authentication > Users*, menú del usuario (los tres puntos) > enviar recuperación o cambiar la contraseña desde ahí.
+
+### Usuarios de prueba y verificación de permisos
+
+1. Crear **dos** usuarios de prueba en *Authentication > Users* (con **Auto Confirm User**), por ejemplo `prueba1@...` y `prueba2@...`.
+2. Abrir `supabase/08-admin-base.sql`, reemplazar los dos `PEGAR-AQUI-EL-UUID-...` por el *User UID* de cada uno y correrlo en el SQL Editor.
+   Deja al usuario 1 como `owner` de `aroma`, crea el local **`local-prueba`** (inactivo, con una categoría y un producto) y deja al usuario 2 como `owner`
+   solo de ese local. Se puede correr más de una vez.
+3. Completar en `.env` (no se versiona) `TEST_USER1_EMAIL`, `TEST_USER1_PASSWORD`, `TEST_USER2_EMAIL` y `TEST_USER2_PASSWORD`.
+4. `npm run verificar:permisos` comprueba contra Supabase real, con la clave anon: que el usuario 1 lee y escribe en su local; que no puede modificar ni crear nada
+   en `local-prueba`; que el usuario 2 no puede tocar `aroma`; que un anónimo no puede escribir en ninguna tabla; que las imágenes solo se suben a la carpeta del
+   propio local; y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
+   inactivas y escribe valores idénticos a los que ya había) y al final verifica que todo quedó como estaba.
+5. `npm run probar` corre además las pruebas de lógica pura de permisos y del formulario de ingreso (`scripts/probar-permisos.mjs`), sin red.
 
 ## Medir el rendimiento (Lighthouse)
 

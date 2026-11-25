@@ -1,0 +1,585 @@
+/*
+  Panel de administración: estilo propio, sobrio y neutro (no usa la identidad de cada local).
+  Solo se carga con las rutas /admin (React.lazy), así que no suma peso al menú público.
+  Reutiliza de la marca únicamente la tipografía (Lato, ya cargada) y el contorno de foco.
+  Contrastes: texto #1d1d1b sobre #f4f4f1 y sobre blanco (> 15:1); texto suave #5b5a55 (6:1);
+  texto blanco sobre #2b3a42 (11:1); error #9b2c2c sobre blanco (7:1).
+*/
+
+.admin {
+  --a-fondo: #f4f4f1;
+  --a-superficie: #ffffff;
+  --a-borde: #d4d3cc;
+  --a-borde-fuerte: #8d8c85; /* bordes de campos: 3,3:1 sobre blanco */
+  --a-texto: #1d1d1b;
+  --a-suave: #5b5a55;
+  --a-primario: #2b3a42;
+  --a-primario-hover: #1c272d;
+  --a-error: #9b2c2c;
+  --a-error-fondo: #fbeeee;
+  --a-ok: #2f6b3f;
+  --a-aviso-fondo: #fdf3dc;
+  --a-aviso-borde: #c9a24a;
+  --a-radio: 8px;
+  --a-toque: 2.75rem; /* 44 px */
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--a-fondo);
+  color: var(--a-texto);
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-base);
+  line-height: 1.5;
+}
+
+/* En el panel los títulos van en la tipografía de texto (el serif en cursiva es de las cartas) */
+.admin h1,
+.admin h2,
+.admin h3 {
+  font-family: var(--fuente-texto);
+  font-style: normal;
+  font-weight: var(--peso-fuerte);
+  line-height: 1.25;
+}
+
+/* ── Carga ──────────────────────────────────────────────────── */
+.adm-carga {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--a-fondo);
+}
+
+.adm-carga__punto {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--a-borde-fuerte);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .adm-carga__punto {
+    animation: adm-pulso 1.2s ease-in-out infinite;
+  }
+
+  @keyframes adm-pulso {
+    50% {
+      opacity: 0.3;
+    }
+  }
+}
+
+/* ── Piezas comunes ─────────────────────────────────────────── */
+.adm-titulo {
+  margin: 0 0 var(--espacio-4);
+  font-size: 1.5rem;
+}
+
+.adm-subtitulo {
+  margin: 0 0 var(--espacio-3);
+  font-size: 1.0625rem;
+}
+
+.adm-texto {
+  margin: 0 0 var(--espacio-3);
+}
+
+.adm-texto--suave {
+  color: var(--a-suave);
+}
+
+.adm-marca {
+  margin: 0;
+  font-weight: var(--peso-fuerte);
+  letter-spacing: 0.14em;
+  font-size: var(--texto-sm);
+}
+
+.adm-marca span {
+  margin-left: 0.4em;
+  font-weight: var(--peso-regular);
+  letter-spacing: 0.04em;
+  color: var(--a-suave);
+}
+
+.adm-tarjeta {
+  padding: var(--espacio-5);
+  background: var(--a-superficie);
+  border: 1px solid var(--a-borde);
+  border-radius: var(--a-radio);
+}
+
+.adm-tarjeta--aviso {
+  max-width: 32rem;
+}
+
+.adm-centro {
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--espacio-4);
+}
+
+.adm-centro > .adm-tarjeta {
+  width: 100%;
+}
+
+.adm-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--espacio-3);
+  margin-top: var(--espacio-4);
+}
+
+.adm-enlace {
+  color: var(--a-primario);
+  font-size: var(--texto-sm);
+  text-underline-offset: 0.2em;
+}
+
+.adm-enlace--boton {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+/* Botones: 44 px de alto como mínimo */
+.adm-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--a-toque);
+  padding: 0 var(--espacio-4);
+  border: 1px solid var(--a-borde-fuerte);
+  border-radius: var(--a-radio);
+  background: var(--a-superficie);
+  color: var(--a-texto);
+  font: inherit;
+  font-weight: var(--peso-fuerte);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.adm-boton:hover {
+  background: var(--a-fondo);
+}
+
+.adm-boton--primario {
+  border-color: var(--a-primario);
+  background: var(--a-primario);
+  color: #ffffff;
+}
+
+.adm-boton--primario:hover {
+  background: var(--a-primario-hover);
+}
+
+.adm-boton--ancho {
+  width: 100%;
+}
+
+.adm-boton--chico {
+  padding: 0 var(--espacio-3);
+  font-size: var(--texto-sm);
+}
+
+.adm-boton[aria-disabled='true'] {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* ── Login ──────────────────────────────────────────────────── */
+.adm-login {
+  max-width: 26rem;
+}
+
+.adm-login .adm-marca {
+  margin-bottom: var(--espacio-5);
+}
+
+.adm-formulario {
+  display: grid;
+  gap: var(--espacio-4);
+  margin-top: var(--espacio-5);
+}
+
+.adm-campo {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.adm-etiqueta {
+  font-weight: var(--peso-fuerte);
+  font-size: var(--texto-sm);
+}
+
+/* 16 px o más: el iPhone no hace zoom al enfocar el campo */
+.adm-entrada {
+  width: 100%;
+  min-height: var(--a-toque);
+  padding: 0 var(--espacio-3);
+  border: 1px solid var(--a-borde-fuerte);
+  border-radius: var(--a-radio);
+  background: var(--a-superficie);
+  color: var(--a-texto);
+  font: inherit;
+  font-size: max(16px, 1rem);
+}
+
+.adm-entrada[aria-invalid='true'] {
+  border-color: var(--a-error);
+}
+
+.adm-entrada-con-boton {
+  position: relative;
+}
+
+.adm-entrada-con-boton .adm-entrada {
+  padding-right: var(--a-toque);
+}
+
+.adm-ojo {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: var(--a-toque);
+  height: var(--a-toque);
+  padding: 0;
+  border: 0;
+  border-radius: var(--a-radio);
+  background: transparent;
+  color: var(--a-suave);
+  cursor: pointer;
+}
+
+.adm-ojo:hover {
+  color: var(--a-texto);
+}
+
+.adm-error-campo {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--a-error);
+}
+
+/* La región aria-live reserva su lugar aunque esté vacía: no hay saltos al aparecer el error */
+.adm-error {
+  min-height: 1.5rem;
+  margin: 0;
+  font-weight: var(--peso-fuerte);
+  font-size: var(--texto-sm);
+  color: var(--a-error);
+}
+
+.adm-error-bloque {
+  margin: var(--espacio-3) 0 0;
+  padding: var(--espacio-3);
+  border-radius: var(--a-radio);
+  background: var(--a-error-fondo);
+  color: var(--a-error);
+  font-size: var(--texto-sm);
+}
+
+.adm-aviso {
+  margin: var(--espacio-4) 0 0;
+  padding: var(--espacio-3);
+  border: 1px solid var(--a-aviso-borde);
+  border-radius: var(--a-radio);
+  background: var(--a-aviso-fondo);
+  font-size: var(--texto-sm);
+}
+
+/* ── Estructura del panel de un local ───────────────────────── */
+.adm-pagina {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.adm-saltar {
+  position: absolute;
+  top: -4rem;
+  left: var(--espacio-3);
+  z-index: 50;
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--a-radio);
+  background: var(--a-primario);
+  color: #ffffff;
+}
+
+.adm-saltar:focus {
+  top: var(--espacio-2);
+}
+
+.adm-cabecera {
+  background: var(--a-superficie);
+  border-bottom: 1px solid var(--a-borde);
+}
+
+.adm-cabecera__fila,
+.adm-local,
+.adm-nav__lista,
+.adm-contenido {
+  max-width: 60rem;
+  margin-inline: auto;
+}
+
+.adm-cabecera__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  padding: var(--espacio-3) var(--espacio-4);
+}
+
+.adm-usuario {
+  display: flex;
+  align-items: center;
+  gap: var(--espacio-3);
+  min-width: 0;
+}
+
+.adm-usuario__datos {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--texto-xs);
+  line-height: 1.3;
+}
+
+.adm-usuario__email {
+  max-width: 9.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--a-suave);
+}
+
+.adm-rol {
+  margin-top: 2px;
+  padding: 0 var(--espacio-2);
+  border: 1px solid var(--a-borde-fuerte);
+  border-radius: 999px;
+  font-weight: var(--peso-fuerte);
+  white-space: nowrap;
+}
+
+.adm-local {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--espacio-2) var(--espacio-3);
+  padding: 0 var(--espacio-4) var(--espacio-3);
+}
+
+.adm-local__nombre {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: var(--peso-fuerte);
+}
+
+.adm-estado {
+  padding: 0 var(--espacio-2);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-fuerte);
+}
+
+.adm-estado--activo {
+  color: var(--a-ok);
+}
+
+.adm-estado--inactivo {
+  color: var(--a-error);
+}
+
+/* Navegación: en celular se desliza sin barra visible */
+.adm-nav__lista {
+  display: flex;
+  margin-block: 0;
+  padding: 0 var(--espacio-2);
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.adm-nav__lista::-webkit-scrollbar {
+  display: none;
+}
+
+.adm-nav__lista li {
+  flex: none;
+}
+
+.adm-nav__enlace {
+  display: flex;
+  align-items: center;
+  min-height: var(--a-toque);
+  padding: 0 var(--espacio-4);
+  border-bottom: 3px solid transparent;
+  color: var(--a-suave);
+  font-weight: var(--peso-fuerte);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.adm-nav__enlace:hover {
+  color: var(--a-texto);
+}
+
+.adm-nav__enlace[aria-current='page'] {
+  color: var(--a-texto);
+  border-bottom-color: var(--a-primario);
+}
+
+.adm-nav__enlace:focus-visible {
+  outline-offset: -4px;
+}
+
+.adm-contenido {
+  padding: var(--espacio-5) var(--espacio-4) var(--espacio-7);
+}
+
+.adm-contenido:focus {
+  outline: none; /* recibe el foco al cambiar de sección, pero no es un control */
+}
+
+.adm-contenido--angosto {
+  max-width: 36rem;
+}
+
+.adm-contenido > section {
+  margin-top: var(--espacio-6);
+}
+
+/* ── Resumen ────────────────────────────────────────────────── */
+.adm-datos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--espacio-3);
+  margin: 0;
+}
+
+.adm-dato {
+  display: flex;
+  flex-direction: column;
+  gap: var(--espacio-1);
+  min-width: 0;
+  padding: var(--espacio-3);
+  background: var(--a-superficie);
+  border: 1px solid var(--a-borde);
+  border-radius: var(--a-radio);
+}
+
+.adm-dato dt {
+  font-size: var(--texto-xs);
+  color: var(--a-suave);
+}
+
+.adm-dato dd {
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem; /* = alto del número (1,5 rem × interlineado 1,5): sin saltos al terminar de cargar */
+  margin: 0;
+}
+
+.adm-dato__numero {
+  font-size: 1.5rem;
+  line-height: 1.5;
+  font-weight: var(--peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-esqueleto {
+  display: block;
+  width: 2rem;
+  height: 1.25rem;
+  border-radius: 4px;
+  background: var(--a-borde);
+}
+
+.adm-enlaces {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-enlaces .adm-texto {
+  margin: 0;
+}
+
+/* ── Elegir local ───────────────────────────────────────────── */
+.adm-lista {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-fila-local {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+  min-height: 3.5rem;
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--a-superficie);
+  border: 1px solid var(--a-borde);
+  border-radius: var(--a-radio);
+  color: var(--a-texto);
+  text-decoration: none;
+}
+
+.adm-fila-local:hover {
+  border-color: var(--a-borde-fuerte);
+}
+
+.adm-fila-local__nombre {
+  font-weight: var(--peso-fuerte);
+}
+
+.adm-fila-local__meta {
+  display: flex;
+  gap: var(--espacio-2);
+  font-size: var(--texto-xs);
+}
+
+@media (min-width: 640px) {
+  .adm-cabecera__fila,
+  .adm-local,
+  .adm-contenido {
+    padding-inline: var(--espacio-5);
+  }
+
+  .adm-usuario__email {
+    max-width: 18rem;
+  }
+
+  .adm-usuario__datos {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--espacio-2);
+    font-size: var(--texto-sm);
+  }
+
+  .adm-nav__lista {
+    padding-inline: var(--espacio-3);
+  }
+
+  .adm-dato {
+    padding: var(--espacio-4);
+  }
+}

@@ -7,10 +7,18 @@ const ANCHO_480 = /-480\.(webp|jpg)$/
 
 export const PROPORCION_PRODUCTO = { ancho: 480, alto: 600 } // 4:5
 
-// Logo para fondos oscuros: por convención está junto al logo principal, con el
-// sufijo "-claro" (ver `npm run imagenes -- logo`). Devuelve null si no se puede deducir.
-export function logoClaro(url) {
-  return url?.endsWith('/logo.webp') ? url.replace(/logo\.webp$/, 'logo-claro.webp') : null
+// Logo de la portada: { src, ancho, alto } o null (se muestra el nombre del local).
+//   * subido desde el panel: ".../<local_id>/logo/logo-<hex>-<ancho>x<alto>.webp" (o .png). Se usa
+//     tal cual; las medidas van en el nombre para reservar el lugar antes de que cargue.
+//   * del demo: "/logo.webp" tiene al lado "logo-claro.webp" para la portada oscura
+//     (ver `npm run imagenes -- logo`). Sobre una portada clara va el principal.
+const LOGO_SUBIDO = /\/storage\/v1\/object\/public\/imagenes\/[^/]+\/logo\/logo-[0-9a-z]+-(\d{1,4})x(\d{1,4})\.(webp|png)$/
+
+export function logoDePortada(url, clara = false) {
+  const subido = LOGO_SUBIDO.exec(url ?? '')
+  if (subido) return { src: url, ancho: Number(subido[1]), alto: Number(subido[2]) }
+  if (!url?.endsWith('/logo.webp')) return null
+  return { src: clara ? url : url.replace(/logo\.webp$/, 'logo-claro.webp'), ancho: 560, alto: 111 }
 }
 
 // Devuelve { src, srcSet } para el <img>. El atributo sizes lo define cada

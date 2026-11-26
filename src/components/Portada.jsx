@@ -1,4 +1,6 @@
-import { logoClaro } from '../lib/imagenes'
+import { useState } from 'react'
+import { logoDePortada } from '../lib/imagenes'
+import { portadaClara } from '../lib/tema'
 import { usePausarFueraDePantalla } from '../lib/usePausarFueraDePantalla'
 import Aviso from './Aviso'
 import EstadoLocal from './EstadoLocal'
@@ -8,9 +10,11 @@ import Granos from './Granos'
 // primera sección (destacados o la primera categoría): el botón baja hasta ahí.
 // `horarios` (ya normalizados, o null) alimenta la línea "Abierto ahora".
 // El contenido entra de a poco (CSS) y los granos de café se pausan al salir de pantalla.
-export default function Portada({ local, horarios, destino }) {
+// `logoVista` ({ src, ancho, alto }) lo usa la vista previa del panel para un logo sin subir.
+export default function Portada({ local, horarios, destino, logoVista = null }) {
   const ref = usePausarFueraDePantalla()
-  const logo = logoClaro(local.logo_url)
+  const logo = logoVista ?? logoDePortada(local.logo_url, portadaClara(local.tema))
+  const [logoRoto, setLogoRoto] = useState(null) // si la imagen no carga, queda el nombre
   const frase = local.tema?.frase
 
   return (
@@ -20,8 +24,8 @@ export default function Portada({ local, horarios, destino }) {
 
       <div className="portada__contenido">
         <h1 className="portada__titulo portada__entra">
-          {logo ? (
-            <img className="portada__logo" src={logo} alt={local.nombre} width="560" height="111" fetchPriority="high" />
+          {logo && logo.src !== logoRoto ? (
+            <img className="portada__logo" src={logo.src} alt={local.nombre} width={logo.ancho} height={logo.alto} fetchPriority="high" onError={() => setLogoRoto(logo.src)} />
           ) : (
             local.nombre
           )}

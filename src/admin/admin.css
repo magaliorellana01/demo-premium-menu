@@ -6,6 +6,7 @@
 @import './ui/ui.css';
 @import './categorias.css';
 @import './productos.css';
+@import './ajustes.css';
 
 .admin {
   min-height: 100vh;

@@ -8,11 +8,11 @@ import { comprimirHastaPeso, esHeic, extensionDeTipo, MAX_BYTES_BUCKET, pasosDeR
 
 const FONDO = '#fffdf9' // porcelana de la marca: lo transparente de un PNG no queda negro en JPEG
 
-class ErrorDeFoto extends Error {}
+export class ErrorDeFoto extends Error {}
 export const esErrorDeFoto = (error) => error instanceof ErrorDeFoto
 
 /** Abre el archivo ya girado según su orientación EXIF (las fotos del celular vienen "acostadas"). */
-async function abrirImagen(archivo) {
+export async function abrirImagen(archivo) {
   if (typeof createImageBitmap === 'function') {
     try {
       const bitmap = await createImageBitmap(archivo, { imageOrientation: 'from-image' })

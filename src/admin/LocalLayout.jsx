@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router-dom'
 import Encabezado from './Encabezado'
+import GuardaDeSalida from './GuardaDeSalida'
 import SinAcceso from './SinAcceso'
 import { useAcceso, usePermisos } from './useAcceso'
 import { useFocoSinTapar } from './useFocoSinTapar'
@@ -44,39 +45,41 @@ export default function LocalLayout() {
   const puedeCambiar = acceso.esAdmin || acceso.locales.length > 1
 
   return (
-    <div className="adm-pagina">
-      <title>{`${seccionActual.nombre} · ${local.nombre} · Panel`}</title>
-      <a className="adm-saltar" href="#contenido">
-        Saltar al contenido
-      </a>
+    <GuardaDeSalida>
+      <div className="adm-pagina">
+        <title>{`${seccionActual.nombre} · ${local.nombre} · Panel`}</title>
+        <a className="adm-saltar" href="#contenido">
+          Saltar al contenido
+        </a>
 
-      <Encabezado rol={rol}>
-        <div className="adm-local">
-          <p className="adm-local__nombre">{local.nombre}</p>
-          {!local.activo && <span className="ui-chip ui-chip--cobre adm-estado">Inactivo</span>}
-          {puedeCambiar && (
-            <Link className="adm-cambiar" to="/admin">
-              Cambiar de local
-            </Link>
-          )}
-        </div>
-      </Encabezado>
+        <Encabezado rol={rol}>
+          <div className="adm-local">
+            <p className="adm-local__nombre">{local.nombre}</p>
+            {!local.activo && <span className="ui-chip ui-chip--cobre adm-estado">Inactivo</span>}
+            {puedeCambiar && (
+              <Link className="adm-cambiar" to="/admin">
+                Cambiar de local
+              </Link>
+            )}
+          </div>
+        </Encabezado>
 
-      <nav className="adm-pestanas" aria-label="Secciones del panel" ref={barraRef}>
-        <ul className="adm-pestanas__lista" role="list">
-          {SECCIONES.map((seccion) => (
-            <li key={seccion.nombre}>
-              <NavLink className="adm-pestana" to={seccion.ruta ? `/admin/${local.slug}/${seccion.ruta}` : `/admin/${local.slug}`} end={seccion.fin}>
-                {seccion.nombre}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
+        <nav className="adm-pestanas" aria-label="Secciones del panel" ref={barraRef}>
+          <ul className="adm-pestanas__lista" role="list">
+            {SECCIONES.map((seccion) => (
+              <li key={seccion.nombre}>
+                <NavLink className="adm-pestana" to={seccion.ruta ? `/admin/${local.slug}/${seccion.ruta}` : `/admin/${local.slug}`} end={seccion.fin}>
+                  {seccion.nombre}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-      <main className="adm-contenido" id="contenido" ref={principalRef} tabIndex={-1}>
-        <Outlet context={{ local, rol, permisos }} />
-      </main>
-    </div>
+        <main className="adm-contenido" id="contenido" ref={principalRef} tabIndex={-1}>
+          <Outlet context={{ local, rol, permisos }} />
+        </main>
+      </div>
+    </GuardaDeSalida>
   )
 }

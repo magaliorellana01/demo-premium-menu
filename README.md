@@ -5,9 +5,9 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 único proyecto de Supabase (Postgres + Auth + Storage) y datos separados por local (multi-tenant).
 
 - Menú público: `/:slug` (ej. `/aroma`)
-- Panel de administración: `/admin` (login, permisos y administración de categorías y productos con fotos; ajustes llega en una próxima tarea)
+- Panel de administración: `/admin` (login, permisos, categorías, productos con fotos y ajustes del local)
 
-Estado: **Tarea 10** (administración de productos con subida de fotos). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
+Estado: **Tarea 11** (ajustes del local: datos, horarios, aviso, colores y logo). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
 
 ## Cómo correrlo
 
@@ -76,7 +76,9 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
 12. Antes del panel: crear los usuarios de prueba y correr `supabase/08-admin-base.sql` (ver "Panel de administración" más abajo).
 13. Para reordenar categorías desde el panel: correr `supabase/09-admin-categorias.sql` (ver "Categorías" más abajo).
 14. Para administrar productos: correr `supabase/10-admin-productos.sql` (ver "Productos" más abajo).
-15. `npm run dev` y abrir `/aroma`.
+15. Para los ajustes del local: correr `supabase/11-admin-ajustes.sql` (ver "Ajustes" más abajo). Si alguna vez se vuelve a correr
+    `schema.sql`, hay que volver a correr el `11` después: `schema.sql` devuelve el permiso de actualizar toda la tabla (el trigger sigue protegiendo).
+16. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -112,7 +114,7 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs   Pruebas de lógica pura (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs   Pruebas de lógica pura (npm run probar)
   verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
@@ -124,7 +126,8 @@ src/
                         useCategoriaActiva.js, useAparecer.js, usePausarFueraDePantalla.js, movimiento.js, demo.js,
                         horarios.js (puro), contacto.js (enlaces seguros), visita.js, useAhora.js (reloj por minuto),
                         etiquetas.js (vocabulario, reutilizable en el panel), filtros.js (búsqueda y filtros, puro), useFiltros.js,
-                        precios.js (formato ARS, variantes y adicionales; límites reutilizables en el panel)
+                        precios.js (formato ARS, variantes y adicionales; límites reutilizables en el panel),
+                        tema.js (colores del local y contraste, puro), useTema.js, atras.js ("atrás" antes que el router)
   components/           Carta (arma la página), Portada, Granos, EstadoLocal, Aviso, NavCategorias, Busqueda, Destacados,
                         SeccionCategoria, TarjetaProducto, Precio, Visitanos, PantallaMensaje, Esqueleto y Pie
   pages/                Menú (/:slug) y "local no encontrado"
@@ -141,6 +144,7 @@ supabase/
   08-admin-base.sql     Panel: slug "login" reservado, local de prueba inactivo y membresías de los usuarios de prueba
   09-admin-categorias.sql   Función para reordenar categorías de forma atómica
   10-admin-productos.sql    Límites de nombres y precio, y función para reordenar productos
+  11-admin-ajustes.sql      Protección de columnas de locales, validaciones, updated_at y carpeta del logo
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -152,7 +156,9 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
   (los no disponibles también: la interfaz los muestra atenuados). Escriben solo los miembros del local y los admins.
 - Los `editor` gestionan categorías y productos; los `owner` además editan los datos del local. Crear locales y
   asignar usuarios es solo de admins.
-- Storage: bucket público `imagenes` (webp, jpeg y png, máx. 2 MB). Cada local sube solo a su carpeta `<local_id>/...`.
+- Storage: bucket público `imagenes` (webp, jpeg y png, máx. 2 MB). Cada local sube solo a su carpeta `<local_id>/...`;
+  en `<local_id>/logo/` solo escriben el dueño y los admins.
+- En `locales`, además del RLS (qué filas), hay protección por columna (qué datos): ver "Ajustes".
 - El slug `admin` está reservado para el panel.
 
 ## Cómo funciona el menú público
@@ -160,7 +166,8 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
 - **Portada:** bloque tipográfico sobre espresso (75 % de la pantalla, máximo 46 rem) con el logo claro, la frase
   (`tema.frase`), la descripción y el botón "Ver la carta", que baja a la primera sección (destacados o, si no hay,
   la primera categoría) y la deja justo debajo de la barra. Entra de a poco (logo, frase, descripción y botón, con retardos
-  de 0,12 s). El logo claro se deduce del logo principal por convención: `.../logo.webp` -> `.../logo-claro.webp`.
+  de 0,12 s). Para los logos de la app, la versión clara se deduce por convención: `.../logo.webp` -> `.../logo-claro.webp`
+  (si la portada es clara se usa la oscura). Un logo subido desde el panel se usa tal cual. Si la imagen no carga, queda el nombre.
 - **Granos de café:** 12 granos SVG que caen despacio solo en la portada (cobre y arena, baja opacidad). Se animan únicamente
   `transform` y `opacity`, se pausan cuando la portada sale de pantalla (`IntersectionObserver`) y son decorativos
   (`aria-hidden`, sin clics). Con `prefers-reduced-motion` quedan 6 granos quietos y la portada aparece sin animación.
@@ -184,6 +191,10 @@ brand/                  Material de origen de la marca (NO se versiona, ver .git
 - **Movimiento:** la aparición de secciones y tarjetas se desactiva con `prefers-reduced-motion`.
   El contenido nunca queda oculto si falla el JavaScript o el navegador no soporta `IntersectionObserver`.
 - **Frase de tono:** sale de `locales.tema.frase`; cada local puede tener la suya.
+- **Colores propios:** `locales.tema` admite además `fondo`, `texto`, `acento` y `portada` (`#RRGGBB`). El resto (texto suave,
+  enlaces, bordes y texto sobre botones y portada) se calcula en `src/lib/tema.js` para que se lea. Sin colores propios no se
+  aplica ninguna variable y valen los de `tokens.css`. Con tema propio, mientras carga puede verse un instante el esqueleto con
+  los colores de Aroma; el favicon, la imagen para redes y el `preload` del logo en `index.html` son fijos.
 
 ## Información del local, horarios y aviso
 
@@ -296,8 +307,7 @@ vacía no aparece nada. Siguen visibles mientras se busca o se filtra dentro de 
 
 ## Panel de administración (`/admin`)
 
-Cada local edita su propio menú desde `/admin`. Ya están el ingreso, los permisos y las **categorías**; productos y ajustes
-(hoy "Próximamente") llegan después.
+Cada local edita su propio menú desde `/admin`: ingreso y permisos, **categorías**, **productos** con fotos y **ajustes** del local.
 
 **Rutas**
 - `/admin/login`: ingreso con email y contraseña (sin "olvidé mi contraseña": las contraseñas se resetean desde el dashboard de Supabase).
@@ -335,8 +345,8 @@ faltaba, derivado de los colores de marca (la única excepción es el rojo de er
 Componentes compartidos en `src/admin/ui/`: `Boton`, `Campo`, `Tarjeta`, `Alerta`, `Interruptor` (`role="switch"`), `AvisoEstado`
 (región `aria-live` para "Guardado" y errores) y `Confirmacion` (en línea, sin modales). En el celular la navegación es una barra inferior.
 
-> El panel usa los tokens **fijos** de Aroma: no depende de `locales.tema`. Si más adelante cada cliente tiene su propia marca, habrá que
-> decidir si el panel hereda su tema o se mantiene igual para todos.
+> El panel usa los tokens **fijos** de Aroma: no toma los colores de `locales.tema` (solo la vista previa de Ajustes). Si más adelante
+> cada cliente tiene su propia marca, habrá que decidir si el panel hereda su tema o se mantiene igual para todos.
 
 ### Categorías (`/admin/:slug/categorias`)
 
@@ -406,6 +416,45 @@ mira el **tipo declarado**, no el contenido; un usuario con sesión podría subi
 con sesión). Su fila de control debe dar `security_definer = false`, `anon_puede = false`, `con_sesion_puede = true`, `limites = 6`,
 `bucket_max_bytes = 2097152`, `politicas_storage = 1`, `aroma_categorias = 3` y `aroma_productos = 18`.
 
+### Ajustes (`/admin/:slug/ajustes`)
+
+Editan el **dueño** y los admins; un `editor` lo ve en modo lectura. Cada sección se guarda por separado y, si falla, no se pierde
+lo escrito. Arriba (o al costado desde 1100 px) hay una **vista previa** con los mismos componentes del menú y lo que todavía no se guardó.
+
+| Sección | Qué guarda | Límites y reglas |
+| --- | --- | --- |
+| Información y contacto | `nombre`, `descripcion`, `direccion`, `whatsapp`, `instagram` | Nombre 60, descripción 200 y dirección 120 caracteres. Solo se validan y envían los campos que cambiaron. El modelo no tiene teléfono ni enlace de mapa: "Cómo llegar" se arma con la dirección |
+| Horarios | `horarios` | Por día: abierto (hasta 3 franjas), cerrado o 24 horas; "Copiar a todos los días". Sin superposiciones (también contra el día siguiente). Si cruza la medianoche, cierra a más tardar a las 12:00. Con los 7 días cerrados no se muestran horarios |
+| Aviso | `aviso_texto`, `aviso_activo` | Hasta 200 caracteres. No se puede activar vacío |
+| Apariencia | `tema` | Frase (80) y cuatro colores `#RRGGBB`. Avisa si un contraste queda bajo AA y **bloquea** si el texto sobre el fondo no llega a 3:1. Solo se guardan los colores distintos de los originales |
+| Logo | `logo_url` | PNG, WebP o JPG de hasta 10 MB |
+| Enlace y estado | `activo` (solo admins) | El enlace y el slug son de solo lectura: están impresos en los códigos QR |
+
+- **WhatsApp** se guarda en formato internacional argentino para celulares (`549` + 10 dígitos; se sacan el 0 y el 15). No admite
+  fijos; un número de otro país hay que escribirlo con `+`. **Instagram** se guarda como usuario (acepta el enlace https del perfil).
+- **Logo:** se prepara en el navegador (recorte de bordes transparentes, hasta 640x320 sin agrandar; WebP, con respaldo en **PNG** para
+  no perder la transparencia). Ruta: `<local_id>/logo/logo-<único>-<ancho>x<alto>.webp` (el menú usa las medidas del nombre para
+  reservar el lugar). Mismo orden seguro que las fotos. En Aroma, "Volver al logo original" repone el de la app.
+- **Cambios desde otro equipo:** cada guardado exige que `updated_at` no haya cambiado. Si cambiaron otras columnas, se guarda igual
+  sin pisarlas; si cambió lo mismo que se estaba editando, pregunta con cuál quedarse.
+- **Cambios sin guardar** (Ajustes y formulario de producto): al cambiar de sección, usar atrás o adelante o tocar "Salir", aparece un
+  aviso en la pantalla (sin modal); al recargar o cerrar, el aviso del navegador. El "atrás" depende de `src/lib/atras.js`, que
+  tiene que importarse en `main.jsx` antes de montar la app: sobre `window` los listeners corren en el orden en que se registran.
+
+#### Qué protege la base (`supabase/11-admin-ajustes.sql`)
+
+- **Columnas:** el RLS decide qué filas se editan, no qué columnas. Se combinan dos defensas:
+  - **permisos por columna:** desde la API no se puede actualizar `id`, `slug` ni `updated_at`, tampoco como admin (esos cambios van por el SQL Editor);
+  - **trigger `proteger_local`:** `activo` solo lo cambia un admin (el permiso por columna no alcanza, porque admins y dueños usan el mismo
+    rol de Postgres), y toda columna que se agregue en el futuro queda protegida hasta habilitarla en el trigger y en el `grant`.
+- **Validaciones:** `tema` solo admite `frase` y los cuatro colores `#RRGGBB` (no entra CSS); estructura y superposiciones de `horarios`;
+  largos máximos; Instagram sin otros esquemas que https; `logo_url` solo de la app o de la carpeta `logo/` del propio local. El
+  formato exacto de WhatsApp e Instagram lo controla el panel, y el contraste también: la base no lo revisa.
+- **Storage:** políticas restrictivas para que en `<local_id>/logo/` solo escriban el dueño y los admins.
+- El script comprueba antes los datos existentes (si no cumplen, no aplica nada) y se puede volver a correr. Su fila de control:
+  `columnas_editables` = las 10 de ajustes más `activo`, `update_de_tabla = false`, `anon_puede_actualizar = false`, `trigger_proteccion = 1`,
+  `limites = 9`, `politicas_logo = 3`, `politicas_locales = 5`, `rechaza_css = true`, `rechaza_superpuestos = true`, `locales_cumplen = true`.
+
 ### Configuración manual en Supabase (una sola vez)
 
 1. **Desactivar el registro público:** *Authentication > Sign In / Providers* (en algunos proyectos: *Authentication > Providers > Email*) y apagar
@@ -445,8 +494,12 @@ con sesión). Su fila de control debe dar `security_definer = false`, `anon_pued
    en `local-prueba`; que el usuario 2 no puede tocar `aroma`; que un anónimo no puede escribir en ninguna tabla; que las imágenes solo se suben a la carpeta del
    propio local; las categorías (crear, editar, borrar, adicionales inválidos, borrado con productos y reordenar con la función 09, incluidos los
    intentos que deben fallar); los productos (crear, editar, borrar, límites de la base, categoría de otro local y reordenar con la función 10);
-   las fotos en Storage (tipos y tamaño no permitidos, caché y que nadie escriba, borre ni liste carpetas ajenas); y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
-   inactivas, archivos con el mismo prefijo y escribe valores idénticos a los que ya había) y al final verifica que todo quedó como estaba.
+   las fotos en Storage (tipos y tamaño no permitidos, caché y que nadie escriba, borre ni liste carpetas ajenas); los ajustes (el dueño edita su local; no puede cambiar `slug`, `id`, `activo` ni
+   `updated_at`; la base rechaza temas, enlaces y horarios inválidos; el logo en su carpeta); y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
+   inactivas y archivos con el mismo prefijo) y al final verifica que todo quedó como estaba. **Requiere haber corrido hasta el `11`.**
+   Las pruebas de ajustes escriben sobre las filas **reales** de `aroma` y `local-prueba` (mientras corre, `/aroma` muestra datos de prueba);
+   antes las copia (también a un archivo en la carpeta temporal del sistema) y al final las restaura, salvo `updated_at`. Si se corta,
+   la corrida siguiente restaura primero. No conviene correrlo mientras se muestra la demo. Falta un usuario `editor` de prueba.
 5. `npm run probar` corre además las pruebas de lógica pura de permisos y del formulario de ingreso (`scripts/probar-permisos.mjs`), sin red.
 
 ## Medir el rendimiento (Lighthouse)

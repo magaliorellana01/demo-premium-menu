@@ -1,0 +1,378 @@
+/* Pantalla de ajustes y aviso de "cambios sin guardar". */
+
+.aj {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-5);
+}
+
+.aj-rejilla,
+.aj-secciones {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--espacio-5);
+}
+
+/* ── Vista previa (los componentes del menú, en chico) ────── */
+.aj-vista {
+  min-width: 0;
+}
+
+.aj-vista:focus {
+  outline: none;
+}
+
+.aj-vista__marco {
+  margin-top: var(--espacio-2);
+  overflow: hidden;
+  border: 1px solid var(--adm-borde-control);
+  border-radius: var(--radio-lg);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+}
+
+.aj-vista__marco .portada {
+  --alto-portada: 21rem;
+  min-height: var(--alto-portada);
+  padding: var(--espacio-7) var(--espacio-4) var(--espacio-5);
+}
+
+.aj-vista__marco .portada__logo {
+  width: min(14rem, 60vw);
+  max-height: 7rem;
+}
+
+.aj-vista__marco .portada__frase {
+  font-size: var(--texto-xl);
+}
+
+.aj-vista__marco .portada__descripcion {
+  font-size: var(--texto-base);
+}
+
+.aj-vista__marco .portada__titulo {
+  overflow-wrap: anywhere;
+}
+
+/* La vista previa no hace la entrada animada cada vez que se la dibuja */
+.aj-vista__marco .portada__entra {
+  animation: none;
+}
+
+.aj-vista__carta {
+  margin: 0;
+  padding: var(--espacio-3) var(--espacio-4);
+  list-style: none;
+}
+
+.aj-vista__carta .tarjeta {
+  border-bottom: 0;
+}
+
+.aj-subir {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: var(--alto-toque);
+  color: var(--adm-texto); /* va sobre el fondo del panel: el cobre no llega a AA ahí */
+}
+
+/* ── Secciones ───────────────────────────────────────────── */
+.aj-seccion__titulo:focus {
+  outline: none; /* recibe el foco después de guardar o descartar */
+}
+
+.aj-seccion__descripcion {
+  margin-bottom: var(--espacio-4);
+  font-size: var(--texto-sm);
+}
+
+.aj-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+.aj-form__corto {
+  justify-self: start;
+}
+
+.aj-pie {
+  display: grid;
+  gap: var(--espacio-2);
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--adm-borde);
+}
+
+.aj-estado {
+  min-height: 1.5em;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+}
+
+.aj-progreso {
+  width: 100%;
+  accent-color: var(--color-acento-texto);
+}
+
+.aj-con-enlace {
+  display: grid;
+  gap: var(--espacio-1);
+}
+
+.aj-probar {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  min-height: var(--alto-toque);
+  color: var(--color-acento-texto);
+  font-size: var(--texto-sm);
+}
+
+.aj-lectura {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+}
+
+.aj-lectura dt {
+  font-size: var(--texto-xs);
+  color: var(--adm-texto-suave);
+}
+
+.aj-lectura dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ── Horarios ────────────────────────────────────────────── */
+.aj-dia {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 var(--espacio-3);
+  border: 0;
+  border-bottom: 1px solid var(--adm-borde);
+}
+
+/* El pie de la sección ya trae su línea. */
+.aj-dia:last-of-type {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.aj-dia__nombre {
+  padding: 0 0 var(--espacio-1);
+  font-weight: var(--peso-fuerte);
+}
+
+.aj-dia__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2);
+}
+
+.aj-dia__modo {
+  width: auto;
+  min-width: 10rem;
+}
+
+.aj-franja {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 8.5rem)) auto;
+  align-items: end;
+  gap: var(--espacio-1) var(--espacio-2);
+}
+
+.aj-hora {
+  display: grid;
+  gap: var(--espacio-1);
+  min-width: 0;
+}
+
+.aj-hora .ui-entrada {
+  min-width: 0;
+  padding-inline: var(--espacio-2);
+}
+
+.aj-franja__quitar {
+  padding-inline: var(--espacio-2);
+}
+
+.aj-franja__nota {
+  grid-column: 1 / -1;
+}
+
+.aj-dia__agregar {
+  justify-self: start;
+}
+
+/* ── Colores ─────────────────────────────────────────────── */
+.aj-colores {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--espacio-4);
+}
+
+.aj-color {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-3);
+}
+
+.aj-color__selector {
+  width: 3rem;
+  height: 3rem;
+  margin-top: calc(1.55rem + var(--espacio-1)); /* alineado con el campo, debajo de su etiqueta */
+  padding: 2px;
+  border: 1px solid var(--adm-borde-control);
+  border-radius: var(--radio-md);
+  background: var(--adm-superficie);
+  cursor: pointer;
+}
+
+.aj-contraste {
+  display: grid;
+  gap: var(--espacio-2);
+  padding: var(--espacio-3) var(--espacio-4);
+  border: 1px solid var(--adm-exito);
+  border-left-width: 4px;
+  border-radius: var(--radio-md);
+  background: var(--adm-exito-fondo);
+  font-size: var(--texto-sm);
+}
+
+.aj-contraste--aviso {
+  border-color: var(--color-acento-texto);
+  background: var(--adm-info-fondo);
+}
+
+.aj-contraste--ilegible {
+  border-color: var(--adm-peligro);
+  background: var(--adm-peligro-fondo);
+}
+
+.aj-contraste__titulo {
+  font-size: var(--texto-base);
+}
+
+.aj-contraste ul {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aj-contraste li:not([data-nivel='bien']) > span:first-child {
+  font-weight: var(--peso-fuerte);
+}
+
+/* ── Logo ────────────────────────────────────────────────── */
+/* Alto fijo: elegir o quitar el logo no mueve la página */
+.aj-logo__vista {
+  display: grid;
+  place-items: center;
+  height: 9rem;
+  padding: var(--espacio-3);
+  border: 1px solid var(--adm-borde-control);
+  border-radius: var(--radio-lg);
+}
+
+.aj-logo__vista img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 7rem;
+}
+
+.aj-logo__sin {
+  padding: var(--espacio-2) var(--espacio-3);
+  border-radius: var(--radio-md);
+  background: var(--adm-superficie);
+  color: var(--adm-texto);
+  font-size: var(--texto-sm);
+}
+
+/* ── Esqueleto ───────────────────────────────────────────── */
+.aj-esqueleto {
+  min-height: 24rem;
+}
+
+.aj-esqueleto--vista {
+  min-height: 34rem;
+}
+
+/* ── Aviso de cambios sin guardar (fijo abajo, no es un modal) ── */
+.adm-salida {
+  position: fixed;
+  right: 0;
+  bottom: calc(var(--adm-alto-pestanas) + env(safe-area-inset-bottom, 0px));
+  left: 0;
+  z-index: 45;
+  padding: var(--espacio-3) var(--espacio-4);
+}
+
+.adm-salida__caja {
+  display: grid;
+  gap: var(--espacio-2);
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: var(--espacio-4);
+  border: 2px solid var(--color-texto);
+  border-radius: var(--radio-lg);
+  background: var(--adm-superficie);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--color-espresso) 35%, transparent);
+}
+
+.adm-salida__pregunta {
+  font-size: var(--texto-lg);
+  font-weight: var(--peso-fuerte);
+}
+
+@media (min-width: 768px) {
+  .adm-salida {
+    bottom: var(--espacio-3);
+  }
+
+  .aj-colores {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Pantallas anchas: la vista previa queda al lado, siempre a la vista */
+@media (min-width: 1100px) {
+  .adm-contenido:has(.aj) {
+    max-width: 72rem;
+  }
+
+  .aj-rejilla {
+    grid-template-columns: minmax(0, 1fr) 24rem;
+    align-items: start;
+  }
+
+  .aj-vista {
+    position: sticky;
+    top: calc(var(--alto-nav) + var(--espacio-4));
+    grid-column: 2;
+    grid-row: 1;
+    max-height: calc(100vh - var(--alto-nav) - var(--espacio-6));
+    overflow-y: auto;
+  }
+
+  .aj-secciones {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .aj-subir {
+    display: none;
+  }
+}

@@ -3,6 +3,7 @@ import { etiquetasDelLocal, filtrarCategorias, hayFiltros, ID_CAMPO_BUSQUEDA } f
 import { idCategoria } from '../lib/formato'
 import { normalizarHorarios } from '../lib/horarios'
 import { useFiltros } from '../lib/useFiltros'
+import { useTema } from '../lib/useTema'
 import { datosDeVisita, hayDatosDeVisita, ID_VISITANOS } from '../lib/visita'
 import Busqueda from './Busqueda'
 import Destacados from './Destacados'
@@ -15,6 +16,7 @@ import Visitanos from './Visitanos'
 // La carta completa de un local ya cargado: portada, barra de secciones, buscador con
 // filtros, destacados, categorías y "Visitanos".
 export default function Carta({ local }) {
+  useTema(local.tema)
   const todas = useMemo(() => local.categorias.filter((categoria) => categoria.productos.length > 0), [local])
   const disponibles = useMemo(() => etiquetasDelLocal(todas), [todas])
   const filtros = useFiltros(disponibles.map((etiqueta) => etiqueta.clave))

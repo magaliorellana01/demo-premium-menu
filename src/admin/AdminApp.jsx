@@ -3,11 +3,11 @@ import estilos from './admin.css?inline'
 import InicioAdmin from './InicioAdmin'
 import LocalLayout from './LocalLayout'
 import LoginPage from './LoginPage'
+import PaginaAjustes from './PaginaAjustes'
 import PaginaCategorias from './PaginaCategorias'
 import PaginaProducto from './PaginaProducto'
 import PaginaProductos from './PaginaProductos'
 import PantallaAviso from './PantallaAviso'
-import Proximamente from './Proximamente'
 import Resumen from './Resumen'
 import RutaProtegida from './RutaProtegida'
 import SesionProvider from './SesionProvider'
@@ -56,7 +56,7 @@ export default function AdminApp() {
                 <Route path="productos" element={<PaginaProductos />} />
                 <Route path="productos/nuevo" element={<PaginaProducto />} />
                 <Route path="productos/:productoId" element={<PaginaProducto />} />
-                <Route path="ajustes" element={<Proximamente titulo="Ajustes" soloDueno />} />
+                <Route path="ajustes" element={<PaginaAjustes />} />
                 <Route path="*" element={<PaginaNoEncontrada />} />
               </Route>
               <Route path="*" element={<PaginaNoEncontrada />} />

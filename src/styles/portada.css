@@ -40,6 +40,8 @@
   display: block;
   width: min(19rem, 76vw);
   height: auto;
+  max-height: 10rem; /* un logo propio alto o cuadrado no ocupa toda la portada */
+  object-fit: contain;
 }
 
 .portada__frase {
@@ -47,7 +49,7 @@
   font-style: italic;
   font-size: var(--texto-xl);
   line-height: 1.2;
-  color: var(--color-acento);
+  color: var(--color-acento-portada, var(--color-acento));
 }
 
 .portada__descripcion {
@@ -113,11 +115,11 @@
 }
 
 .granos__grano--cobre {
-  color: var(--color-cobre);
+  color: var(--color-acento);
 }
 
 .granos__grano--arena {
-  color: var(--color-arena);
+  color: var(--color-sobre-oscuro-suave);
 }
 
 /* La ranura del grano toma el color del fondo */
@@ -197,7 +199,7 @@
 }
 
 .estado-local--pronto .estado-local__punto {
-  background: var(--color-cobre);
+  background: var(--color-acento);
 }
 
 .estado-local--cerrado .estado-local__punto {
@@ -242,10 +244,10 @@
 }
 
 .aviso__cerrar:hover {
-  background: color-mix(in srgb, var(--color-espresso) 14%, transparent);
+  background: color-mix(in srgb, var(--color-sobre-acento) 14%, transparent);
 }
 
 .portada .aviso :focus-visible {
-  outline-color: var(--color-espresso);
+  outline-color: var(--color-sobre-acento);
   outline-offset: -4px;
 }

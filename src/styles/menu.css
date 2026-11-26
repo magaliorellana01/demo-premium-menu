@@ -271,7 +271,7 @@
 
 /* Picante: cobre suave */
 .etiqueta--picante {
-  border-color: var(--color-cobre-texto);
+  border-color: var(--color-acento-texto);
   background: color-mix(in srgb, var(--color-acento) 14%, var(--color-fondo));
 }
 

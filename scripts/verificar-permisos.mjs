@@ -5,8 +5,8 @@
 //   usuario 2 = owner solo de "local-prueba"    (TEST_USER2_EMAIL / TEST_USER2_PASSWORD)
 //   anónimo   = sin sesión
 //
-// Requiere haber corrido supabase/08-admin-base.sql, 09-admin-categorias.sql y
-// 10-admin-productos.sql. Uso:  npm run verificar:permisos
+// Requiere haber corrido supabase/08-admin-base.sql, 09-admin-categorias.sql,
+// 10-admin-productos.sql y 11-admin-ajustes.sql. Uso:  npm run verificar:permisos
 //
 // Las credenciales salen de .env (que no se versiona); las contraseñas nunca se imprimen.
 //
@@ -15,7 +15,16 @@
 // quedan INACTIVAS y se borran al final. Los intentos de borrar algo ajeno apuntan solo a esas filas
 // temporales o al local de prueba, jamás a datos reales de aroma. Al terminar se comprueba que no
 // quedó basura (filas ni archivos de Storage, que usan el mismo prefijo) y que todo está como estaba.
+//
+// Los ajustes del local se prueban sobre las filas REALES de aroma y local-prueba (no hay otra
+// forma): antes se copian, también a un archivo en la carpeta temporal del sistema, y al final
+// se restauran. Si una corrida se corta, la siguiente restaura desde ese archivo antes de nada.
+// Lo único que no vuelve atrás es updated_at (lo pone la base). El slug y el estado activo solo
+// se INTENTAN cambiar: tienen que ser rechazados.
 import { createClient } from '@supabase/supabase-js'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import sharp from 'sharp'
 
 const { VITE_SUPABASE_URL: url, VITE_SUPABASE_ANON_KEY: clave } = process.env
@@ -74,8 +83,25 @@ async function contar(cliente, tabla, filtro) {
   return r.count
 }
 
-const contexto = { aroma: null, prueba: null, antes: null, fotoCategorias: null, categoriasAntes: null, fotoProductos: null, productosAntes: null, archivosAntes: null }
+const contexto = { copias: null, restaurados: false, aroma: null, prueba: null, antes: null, fotoCategorias: null, categoriasAntes: null, fotoProductos: null, productosAntes: null, archivosAntes: null }
 const creadas = { aroma: { categorias: [], productos: [] }, prueba: { categorias: [], productos: [] }, archivos: [] }
+
+// Columnas de ajustes: las únicas que se escriben (y se restauran).
+const AJUSTES = ['nombre', 'descripcion', 'direccion', 'whatsapp', 'instagram', 'horarios', 'aviso_texto', 'aviso_activo', 'tema', 'logo_url']
+const COPIA = path.join(os.tmpdir(), 'oestack-copia-ajustes-locales.json')
+const sinVersion = (fila) => JSON.stringify(fila, (k, v) => (k === 'updated_at' ? undefined : v))
+
+/** Devuelve las filas de `copias` a como estaban. Devuelve los errores. */
+async function restaurarLocales(copias) {
+  const errores = []
+  for (const [cliente, copia] of [[c1, copias.aroma], [c2, copias.prueba]]) {
+    const cambios = Object.fromEntries(AJUSTES.map((c) => [c, copia[c]]))
+    const r = await cliente.from('locales').update(cambios).eq('id', copia.id).select('*')
+    if (r.error || r.data.length !== 1) errores.push(`${copia.slug}: ${r.error?.message ?? 'no se actualizó ninguna fila'}`)
+    else if (sinVersion(r.data[0]) !== sinVersion(copia)) errores.push(`${copia.slug}: quedó distinto de la copia (revisá slug y activo)`)
+  }
+  return errores
+}
 
 async function limpiarTemporales() {
   // Borra todo lo que empiece con el prefijo en ambos locales (también restos de una corrida anterior).
@@ -103,10 +129,10 @@ async function limpiarTemporales() {
   return errores
 }
 
-/** Todos los archivos de la carpeta de un local (raíz y productos/). */
+/** Todos los archivos de la carpeta de un local (raíz, productos/ y logo/). */
 async function archivosDe(cliente, localId) {
   const salida = []
-  for (const carpeta of [localId, `${localId}/productos`]) {
+  for (const carpeta of [localId, `${localId}/productos`, `${localId}/logo`]) {
     const r = await cliente.storage.from('imagenes').list(carpeta, { limit: 1000 })
     if (r.error) throw new Error(`No se pudo listar Storage: ${r.error.message}`)
     // Las "carpetas" vienen sin id.
@@ -130,6 +156,12 @@ try {
   const id2 = await entrar(c2, credenciales.u2, 'usuario 2')
   ver(id1 !== id2, 'Los dos usuarios de prueba son personas distintas')
   await limpiarTemporales()
+  if (fs.existsSync(COPIA)) {
+    const errores = await restaurarLocales(JSON.parse(fs.readFileSync(COPIA, 'utf8')))
+    ver(errores.length === 0, 'Había una copia de una corrida cortada: se restauraron los locales', errores.join(' | ') || 'restaurados')
+    if (errores.length) throw new Error(`No se pudo restaurar. La copia sigue en ${COPIA}`)
+    fs.rmSync(COPIA)
+  }
 
   // ── Datos de referencia (sin modificar nada) ─────────────────
   const aroma = (await anon.from('locales').select('id, slug, nombre, descripcion, activo').eq('slug', 'aroma').maybeSingle()).data
@@ -548,6 +580,192 @@ try {
   const borrado = await imagenes(c1).remove([foto480, foto240])
   ver(!borrado.error && borrado.data.length === 2 && !(await existe(foto480)) && !(await existe(foto240)), 'Usuario 1 borra sus dos versiones', borrado.error?.message ?? `${borrado.data.length} borradas`)
 
+  // ═══ AJUSTES DEL LOCAL ═══════════════════════════════════════
+  seccion('Ajustes: copia de las filas reales antes de tocar nada')
+  const leerFila = async (cliente, id) => {
+    const q = await cliente.from('locales').select('*').eq('id', id).maybeSingle()
+    if (q.error) throw new Error(`No se pudo leer el local: ${q.error.message}`)
+    return q.data
+  }
+  const copiaAroma = await leerFila(c1, aroma.id)
+  const copiaPrueba = await leerFila(c2, pruebaPorU2.id)
+  const hay11 = 'updated_at' in copiaAroma
+  ver(hay11, 'La columna updated_at existe', hay11 ? 'sí' : 'falta: corré supabase/11-admin-ajustes.sql')
+  // Sin el SQL 11 la base no valida: no se escribe nada en los locales.
+  if (hay11) {
+    fs.writeFileSync(COPIA, JSON.stringify({ aroma: copiaAroma, prueba: copiaPrueba }))
+    contexto.copias = { aroma: copiaAroma, prueba: copiaPrueba }
+    const editar = (cliente, id, cambios) => cliente.from('locales').update(cambios).eq('id', id).select('*')
+    const actual = () => leerFila(c1, aroma.id)
+    const intacta = async (antes) => JSON.stringify(await actual()) === JSON.stringify(antes)
+    const urlDeLogo = (localId, nombre) => c1.storage.from('imagenes').getPublicUrl(`${localId}/logo/${nombre}`).data.publicUrl
+    const franja = (desde, hasta) => ({ desde, hasta })
+    // jsonb no conserva el orden de las claves: se compara con las claves ordenadas.
+    const canon = (v) => JSON.stringify(v, (k, x) => (x && typeof x === 'object' && !Array.isArray(x) ? Object.fromEntries(Object.keys(x).sort().map((c) => [c, x[c]])) : x))
+
+    seccion('Ajustes: el dueño actualiza los datos de SU local')
+    const validos = {
+      nombre: `${PREFIJO}Aroma`,
+      descripcion: 'Descripción de prueba.',
+      direccion: 'Calle de Prueba 123',
+      whatsapp: '5491155551234',
+      instagram: 'aroma.prueba',
+      horarios: { zona: 'America/Argentina/Buenos_Aires', semana: { lunes: [franja('08:00', '13:00'), franja('16:00', '20:00')], viernes: [franja('20:00', '02:00')], sabado: [franja('02:00', '12:00')], domingo: [] } },
+      aviso_texto: 'Aviso de prueba.',
+      aviso_activo: true,
+      tema: { frase: 'frase de prueba', fondo: '#FFFFFF', texto: '#111111', acento: '#2f6f6f', portada: '#101820' },
+      logo_url: urlDeLogo(aroma.id, `${PREFIJO}logo-640x160.webp`),
+    }
+    let a = await editar(c1, aroma.id, validos)
+    const distintas = AJUSTES.filter((c) => canon(a.data?.[0]?.[c]) !== canon(validos[c]))
+    ver(permitida(a) && distintas.length === 0, 'Usuario 1 actualiza las 10 columnas de ajustes de aroma', a.error ? msg(a) : distintas.length ? `distintas: ${distintas}` : msgOk(a))
+    ver(a.data?.[0]?.updated_at !== copiaAroma.updated_at, 'updated_at cambia solo al guardar')
+    const version = a.data?.[0]?.updated_at
+    a = await c1.from('locales').update({ descripcion: 'con versión vieja' }).eq('id', aroma.id).eq('updated_at', copiaAroma.updated_at).select('id')
+    ver(!a.error && a.data.length === 0, 'Guardar con una versión vieja no pisa nada (0 filas)', msgOk(a))
+    a = await c1.from('locales').update({ descripcion: 'con versión actual' }).eq('id', aroma.id).eq('updated_at', version).select('id')
+    ver(permitida(a), 'Guardar con la versión actual sí (la fecha va y vuelve sin perder precisión)', msgOk(a))
+    const aceptados = {
+      'horarios vacíos {}': { horarios: {} },
+      'las 24 horas toda la semana': { horarios: { semana: Object.fromEntries(['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((d) => [d, [franja('00:00', '24:00')]])) } },
+      'Instagram como enlace https': { instagram: 'https://www.instagram.com/aroma.prueba/' },
+      'logo de la app (/locales/...)': { logo_url: '/locales/aroma/logo.webp' },
+      'logo PNG en su carpeta de Storage': { logo_url: urlDeLogo(aroma.id, `${PREFIJO}logo-10x10.png`) },
+      'campos opcionales vacíos (null)': { descripcion: null, direccion: null, whatsapp: null, instagram: null, aviso_texto: null, aviso_activo: false, logo_url: null },
+      'tema vacío': { tema: {} },
+    }
+    for (const [caso, cambios] of Object.entries(aceptados)) {
+      const x = await editar(c1, aroma.id, cambios)
+      ver(permitida(x), `La base acepta: ${caso}`, msgOk(x))
+    }
+
+    seccion('Ajustes: la base rechaza datos peligrosos o mal formados')
+    const antes = await actual()
+    const rechazados = {
+      'tema: inyección de CSS': { tema: { acento: 'red; background:url(x)' } },
+      'tema: color con basura detrás': { tema: { fondo: '#ffffff; }' } },
+      'tema: color corto': { tema: { texto: '#fff' } },
+      'tema: color con salto de línea': { tema: { portada: '#000000\n' } },
+      'tema: color que no es texto': { tema: { acento: 123456 } },
+      'tema: clave desconocida': { tema: { 'acento;': '#000000' } },
+      'tema: no es un objeto': { tema: ['#000000'] },
+      'tema: frase de 81': { tema: { frase: 'a'.repeat(81) } },
+      'instagram: javascript:': { instagram: 'javascript:alert(1)' },
+      'instagram: data:': { instagram: 'data:text/html,x' },
+      'instagram: http sin s': { instagram: 'http://instagram.com/a' },
+      'instagram: https de otro sitio': { instagram: 'https://evil.example/a' },
+      'whatsapp: un enlace': { whatsapp: 'javascript:alert(1)' },
+      'whatsapp: 31 caracteres': { whatsapp: '1'.repeat(31) },
+      'logo: javascript:': { logo_url: 'javascript:alert(1)' },
+      'logo: data:': { logo_url: 'data:image/png;base64,AAAA' },
+      'logo: https de otro sitio': { logo_url: 'https://evil.example/logo.png' },
+      'logo: http': { logo_url: urlDeLogo(aroma.id, 'logo-1x1.webp').replace('https:', 'http:') },
+      'logo: carpeta de OTRO local': { logo_url: urlDeLogo(pruebaPorU2.id, 'logo-1x1.webp') },
+      'logo: SVG': { logo_url: urlDeLogo(aroma.id, 'logo.svg') },
+      'logo: salto de carpeta': { logo_url: '/locales/aroma/../x.webp' },
+      'horarios: superpuestos': { horarios: { semana: { lunes: [franja('08:00', '13:00'), franja('12:00', '20:00')] } } },
+      'horarios: superpuestos del domingo al lunes': { horarios: { semana: { domingo: [franja('22:00', '09:00')], lunes: [franja('08:00', '12:00')] } } },
+      'horarios: invertidos': { horarios: { semana: { lunes: [franja('20:00', '13:00')] } } },
+      'horarios: misma hora': { horarios: { semana: { lunes: [franja('08:00', '08:00')] } } },
+      'horarios: hora imposible': { horarios: { semana: { lunes: [franja('25:00', '26:00')] } } },
+      'horarios: 4 franjas': { horarios: { semana: { lunes: [franja('01:00', '02:00'), franja('03:00', '04:00'), franja('05:00', '06:00'), franja('07:00', '08:00')] } } },
+      'horarios: día desconocido': { horarios: { semana: { funday: [] } } },
+      'horarios: clave de más en una franja': { horarios: { semana: { lunes: [{ desde: '08:00', hasta: '09:00', x: 1 }] } } },
+      'horarios: formato viejo': { horarios: { 'Lunes a viernes': '8 a 20 h' } },
+      'horarios: semana que no es objeto': { horarios: { semana: [] } },
+      'horarios: zona rara': { horarios: { zona: '<script>', semana: {} } },
+      'horarios: sin hasta': { horarios: { semana: { lunes: [{ desde: '08:00' }] } } },
+      'nombre vacío': { nombre: '   ' },
+      'nombre de 61': { nombre: 'a'.repeat(61) },
+      'descripción de 201': { descripcion: 'a'.repeat(201) },
+      'dirección de 121': { direccion: 'a'.repeat(121) },
+      'aviso de 201': { aviso_texto: 'a'.repeat(201) },
+    }
+    for (const [caso, cambios] of Object.entries(rechazados)) {
+      const x = await editar(c1, aroma.id, cambios)
+      ver(x.error?.code === '23514' && (await intacta(antes)), `Rechazado y nada cambia: ${caso}`, msg(x))
+    }
+
+    seccion('Ajustes: ni el dueño puede cambiar slug, activo ni nada estructural')
+    const prohibidos = {
+      slug: { slug: 'zz-prueba-permisos-slug' },
+      'activo (desactivar su local)': { activo: false },
+      id: { id: UUID_INEXISTENTE },
+      updated_at: { updated_at: '2000-01-01T00:00:00Z' },
+      'activo junto con un dato permitido (se rechaza todo)': { descripcion: 'no tiene que guardarse', activo: false },
+      'slug junto con un dato permitido': { descripcion: 'no tiene que guardarse', slug: 'zz-prueba-permisos-slug' },
+    }
+    for (const [caso, cambios] of Object.entries(prohibidos)) {
+      const x = await editar(c1, aroma.id, cambios)
+      // Si entrara (la protección falló), se deshace en el momento.
+      if (permitida(x)) await editar(c1, aroma.id, { slug: copiaAroma.slug, activo: copiaAroma.activo })
+      ver(x.error?.code === '42501' && (await intacta(antes)), `Usuario 1 NO puede cambiar ${caso}`, msg(x))
+    }
+    const publico = await anon.from('locales').select('slug, activo').eq('id', aroma.id).maybeSingle()
+    ver(publico.data?.slug === 'aroma' && publico.data?.activo === true, 'aroma conserva su slug y sigue activo', JSON.stringify(publico.data))
+
+    seccion('Ajustes: aislamiento entre locales')
+    const intentos = { nombre: { nombre: 'Hackeado' }, tema: { tema: {} }, aviso: { aviso_texto: 'x', aviso_activo: true }, horarios: { horarios: {} } }
+    for (const [caso, cambios] of Object.entries(intentos)) {
+      const x = await editar(c1, pruebaPorU2.id, cambios)
+      ver(bloqueada(x), `Usuario 1 NO puede cambiar ${caso} de local-prueba`, msg(x))
+      const y = await editar(c2, aroma.id, cambios)
+      ver(bloqueada(y) && (await intacta(antes)), `Usuario 2 NO puede cambiar ${caso} de aroma`, msg(y))
+      const z = await editar(anon, aroma.id, cambios)
+      ver(z.error?.code === '42501' && (await intacta(antes)), `Un anónimo NO puede cambiar ${caso} de aroma`, msg(z))
+    }
+    ver(sinVersion(await leerFila(c2, pruebaPorU2.id)) === sinVersion(copiaPrueba), 'local-prueba no cambió con los intentos del usuario 1')
+    let q = await editar(c2, pruebaPorU2.id, { descripcion: 'Descripción del usuario 2.' })
+    ver(permitida(q), 'Usuario 2 actualiza los ajustes de su propio local', msgOk(q))
+    q = await editar(c2, pruebaPorU2.id, { activo: true })
+    if (permitida(q)) await editar(c2, pruebaPorU2.id, { activo: false })
+    ver(q.error?.code === '42501', 'Usuario 2 NO puede activar su local', msg(q))
+    // Si hubiera entrado, local-prueba quedaría publicado: se comprueba.
+    ver((await leerFila(c2, pruebaPorU2.id)).activo === false, 'local-prueba sigue inactivo')
+
+    seccion('Logo en Storage: <local_id>/logo/')
+    const logos = (cliente) => cliente.storage.from('imagenes')
+    const subirLogo = async (cliente, localId, nombre, contentType = 'image/webp', bytes = WEBP_MINIMO) => {
+      const ruta = `${localId}/logo/${nombre}`
+      const x = await logos(cliente).upload(ruta, new Blob([bytes], { type: contentType }), { contentType })
+      if (!x.error) creadas.archivos.push([localId === pruebaPorU2.id ? c2 : c1, ruta])
+      return x
+    }
+    const sigue = async (cliente, localId, nombre) => (await archivosDe(cliente, localId)).includes(`${localId}/logo/${nombre}`)
+    const miLogo = `${PREFIJO}logo-8x10.webp`
+    let l = await subirLogo(c1, aroma.id, miLogo)
+    ver(!l.error, 'Usuario 1 (dueño) sube un logo a la carpeta de aroma', l.error?.message ?? 'subido')
+    l = await subirLogo(c1, aroma.id, `${PREFIJO}logo-8x10.png`, 'image/png', PNG_MINIMO)
+    ver(!l.error, 'También en PNG (respaldo con transparencia)', l.error?.message ?? 'subido')
+    l = await subirLogo(c1, aroma.id, `${PREFIJO}logo.svg`, 'image/svg+xml')
+    ver(Boolean(l.error), 'SVG: rechazado', l.error?.message ?? 'SE SUBIÓ')
+    l = await subirLogo(c1, aroma.id, `${PREFIJO}logo-pesado.webp`, 'image/webp', new Uint8Array(2 * 1024 * 1024 + 1024))
+    ver(Boolean(l.error), 'Más de 2 MB: rechazado', l.error?.message ?? 'SE SUBIÓ')
+    l = await subirLogo(c1, pruebaPorU2.id, `${PREFIJO}ajeno.webp`)
+    ver(Boolean(l.error), 'Usuario 1 NO puede subir un logo a local-prueba', l.error?.message ?? 'SE SUBIÓ')
+    l = await subirLogo(c2, aroma.id, `${PREFIJO}intruso.webp`)
+    ver(Boolean(l.error), 'Usuario 2 NO puede subir un logo a aroma', l.error?.message ?? 'SE SUBIÓ')
+    l = await subirLogo(anon, aroma.id, `${PREFIJO}anon.webp`)
+    ver(Boolean(l.error), 'Un anónimo NO puede subir un logo', l.error?.message ?? 'SE SUBIÓ')
+    await logos(c2).remove([`${aroma.id}/logo/${miLogo}`])
+    ver(await sigue(c1, aroma.id, miLogo), 'Usuario 2 NO puede borrar el logo de aroma (sigue ahí)')
+    await logos(anon).remove([`${aroma.id}/logo/${miLogo}`])
+    ver(await sigue(c1, aroma.id, miLogo), 'Un anónimo NO puede borrarlo (sigue ahí)')
+    l = await subirLogo(c2, pruebaPorU2.id, miLogo)
+    ver(!l.error, 'Usuario 2 (dueño) sube un logo a su propio local', l.error?.message ?? 'subido')
+    l = await logos(c1).remove([`${aroma.id}/logo/${miLogo}`])
+    ver(!l.error && l.data.length === 1 && !(await sigue(c1, aroma.id, miLogo)), 'Usuario 1 borra su logo', l.error?.message ?? `${l.data.length} borrado`)
+    console.log('NOTA   No hay un usuario editor de prueba: que un editor no escriba en logo/ depende de las políticas del SQL 11 (ver su control); esta corrida no lo prueba.')
+
+    seccion('Ajustes: restaurar las filas originales')
+    const errores = await restaurarLocales(contexto.copias)
+    ver(errores.length === 0, 'aroma y local-prueba restaurados (todas las columnas iguales salvo updated_at)', errores.join(' | ') || 'ok')
+    if (errores.length === 0) {
+      fs.rmSync(COPIA)
+      contexto.restaurados = true
+    }
+  }
+
   // ═══ ANÓNIMO ═════════════════════════════════════════════════
   seccion('Anónimo (sin sesión): sigue sin poder escribir en ninguna tabla')
   const falsos = {
@@ -597,6 +815,13 @@ try {
   // ═══ LIMPIEZA Y COMPROBACIÓN FINAL ═══════════════════════════
   seccion('Limpieza')
   try {
+    // Si la corrida se cortó en medio de los ajustes, primero vuelven las filas originales.
+    if (contexto.copias && !contexto.restaurados) {
+      const errores = await restaurarLocales(contexto.copias)
+      ver(errores.length === 0, 'Locales restaurados tras la interrupción', errores.join(' | ') || 'ok')
+      if (errores.length === 0) fs.rmSync(COPIA)
+      else console.log(`NOTA   La copia de las filas originales sigue en ${COPIA}`)
+    }
     const errores = await limpiarTemporales()
     ver(errores.length === 0, 'Se borraron las filas y archivos temporales', errores.join(' | '))
 

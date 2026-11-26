@@ -26,6 +26,7 @@
 
 .boton--acento:hover {
   background: var(--color-sobre-oscuro);
+  color: var(--color-superficie-oscura);
 }
 
 /* Sobre fondo claro: espresso con texto porcelana */

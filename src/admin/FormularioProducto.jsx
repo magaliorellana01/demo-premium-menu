@@ -23,6 +23,7 @@ import Campo from './ui/Campo'
 import Confirmacion from './ui/Confirmacion'
 import Interruptor from './ui/Interruptor'
 import Tarjeta from './ui/Tarjeta'
+import { useCambiosSinGuardar } from './useSalida'
 
 const idDeCampo = (clave) => `producto-${clave}`
 
@@ -52,6 +53,8 @@ export default function FormularioProducto({ local, categorias, productos, origi
   const agregarRef = useRef(null)
 
   const sucio = foto.tipo !== 'igual' || JSON.stringify(formulario) !== JSON.stringify(inicial)
+  // Avisa antes de salir (otra pestaña del panel, atrás, Salir, recargar o cerrar).
+  useCambiosSinGuardar(sucio || guardando)
 
   useEffect(() => {
     montado.current = true
@@ -59,14 +62,6 @@ export default function FormularioProducto({ local, categorias, productos, origi
       montado.current = false
     }
   }, [])
-
-  // Aviso del navegador al recargar o cerrar con cambios sin guardar.
-  useEffect(() => {
-    if (!sucio && !guardando) return undefined
-    const avisar = (evento) => evento.preventDefault()
-    window.addEventListener('beforeunload', avisar)
-    return () => window.removeEventListener('beforeunload', avisar)
-  }, [sucio, guardando])
 
   // Mueve el foco después de que React dibuje (errores, filas nuevas, confirmaciones cerradas).
   useEffect(() => {

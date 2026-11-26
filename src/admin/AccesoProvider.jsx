@@ -27,8 +27,17 @@ export default function AccesoProvider({ usuario, children }) {
   }, [usuarioId, intento])
 
   const recargar = useCallback(() => setIntento((n) => n + 1), [])
+  // El nombre o el estado de un local cambiaron desde Ajustes: se actualiza sin volver a cargar
+  // (recargar mostraría la pantalla de carga y se perdería lo que haya escrito en otra sección).
+  const actualizarLocal = useCallback(
+    (id, cambios) =>
+      setResultado(
+        (r) => r?.acceso && { ...r, acceso: { ...r.acceso, locales: r.acceso.locales.map((l) => (l.id === id ? { ...l, ...cambios } : l)) } },
+      ),
+    [],
+  )
   const acceso = resultado?.acceso ?? null
-  const valor = useMemo(() => ({ acceso, recargar }), [acceso, recargar])
+  const valor = useMemo(() => ({ acceso, recargar, actualizarLocal }), [acceso, recargar, actualizarLocal])
 
   // "Cargando" se deduce: todavía no terminó la carga de ESTE usuario e intento.
   if (resultado?.clave !== clave) return <PantallaCarga />

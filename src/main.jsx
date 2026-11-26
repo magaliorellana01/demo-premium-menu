@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import './lib/atras' // antes que el router: ver el comentario del archivo
 import './styles/index.css'
 import App from './App.jsx'
 

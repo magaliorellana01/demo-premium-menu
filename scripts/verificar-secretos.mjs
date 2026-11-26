@@ -4,6 +4,7 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
+import { revisarHistorial } from './lib/historial.mjs'
 import { buscarSecretos, problemasDeVariables, valoresProhibidos } from './lib/secretos.mjs'
 
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).split('\0').filter(Boolean)
@@ -46,6 +47,20 @@ for (const archivo of [...versionados, ...publicados]) {
 
 console.log(`\n${revisados} archivos revisados (${versionados.length} del repo, ${publicados.length} de dist/) · valores secretos buscados: ${enRepo.length} en el repo, ${enDist.length} en dist/`)
 if (!existsSync('dist')) console.log('NOTA   No hay carpeta dist/: corré "npm run build" para revisar también lo que se publica.')
+
+// --historial: además, todo lo que alguna vez se commiteó. (npm_config_historial: en
+// PowerShell, un "--" sin comillas hace que npm se quede con la opción.)
+if (process.argv.includes('--historial') || process.env.npm_config_historial === 'true') {
+  console.log('\n— Historial de git (todas las ramas) —')
+  const h = revisarHistorial({ valores: enRepo })
+  const renglon = (x) => `${x.donde}${x.linea ? `:${x.linea}` : ''}  →  ${x.motivo}  (commit ${x.commits.slice(0, 4).join(', ')}${x.commits.length > 4 ? ` y ${x.commits.length - 4} más` : ''})`
+  for (const x of h.hallazgos) console.log(`FALLÓ  ${renglon(x)}`)
+  for (const x of h.avisos) console.log(`AVISO  ${renglon(x)}`)
+  for (const ruta of h.omitidos) console.log(`NOTA   Sin revisar por pesar más de 5 MB: ${ruta}`)
+  console.log(`${h.commits} commits y ${h.archivos} versiones de archivos revisados · ${h.hallazgos.length} hallazgo(s), ${h.avisos.length} aviso(s)`)
+  total += h.hallazgos.length
+} else console.log('NOTA   Para revisar también el historial de git:  npm run verificar:secretos \'--\' --historial')
+
 if (total) {
   console.log(`\n${total} hallazgo(s). No commitees ni publiques. Si una clave llegó a git o al sitio, borrala en Supabase y creá otra.`)
   process.exit(1)

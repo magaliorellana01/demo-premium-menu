@@ -5,6 +5,7 @@ import { armarCopia, canon, DEMO_EMAIL, describirDiferencias, diferencias, probl
 import { capturarDemo, planDeReinicio, reiniciarDemo } from './demo/operaciones.mjs'
 import { leerCopiaGuardada } from './demo/archivo.mjs'
 import { buscarSecretos, problemasDeVariables, valoresProhibidos } from './lib/secretos.mjs'
+import { revisarTexto } from './lib/historial.mjs'
 import { AVISO_DEMO, credencialesDemo, esUsuarioDemo, mensajeDeErrorDemo, opcionesDeSalida } from '../src/admin/demo.js'
 import { MENSAJE_CREDENCIALES, mensajeErrorLogin } from '../src/admin/login.js'
 import { mensajeDeErrorAjustes } from '../src/admin/ajustes.js'
@@ -290,6 +291,19 @@ si('si la demo repitiera otra, esa se sigue buscando en lo publicado', valoresPr
 const motivos = (texto) => buscarSecretos(texto).map((h) => h.motivo)
 for (const linea of [`${PUBLICA}=${BUENA}`, `${PUBLICA}="${BUENA}"`, `${PUBLICA} = '${BUENA}'`, `${['VITE', 'X', 'PASSWORD'].join('_')}=abc`]) si(`detecta un valor escrito: ${linea.split('=')[0].trim()}`, motivos(linea).some((m) => m.includes('contraseña')))
 for (const linea of [`${PUBLICA}=`, `${PUBLICA}=""`, `if (n === ${PUBLICA}) {}`, `password: import.meta.env.${PUBLICA} })`, `Cargá ${PUBLICA} en el hosting.`]) caso(`no marca: ${linea.replace(PUBLICA, '…')}`, motivos(linea), [])
+
+// ── Historial de git ──
+const hallados = (texto) => revisarTexto(texto).hallazgos.map((h) => h.motivo)
+const armar = (...partes) => partes.join('')
+si('historial: clave privada', hallados(armar('-----BEGIN RSA PRIVATE ', 'KEY-----')).includes('clave privada'))
+si('historial: conexión a la base con contraseña', hallados(armar('postgres', '://usuario:Clave123@db.ejemplo.com/postgres')).length === 1)
+caso('historial: una conexión con el lugar de la contraseña sin completar no cuenta', hallados(armar('postgres', '://usuario:[CONTRASEÑA]@db.ejemplo.com/postgres')), [])
+si('historial: token de GitHub', hallados(armar('ghp', '_', 'a'.repeat(36))).includes('token de GitHub'))
+si('historial: variable de entorno sensible con valor', hallados(armar('TEST_USER1_PASS', 'WORD=Clave-De-Antes1!')).length === 1)
+for (const linea of ['TEST_USER1_PASSWORD=', 'DEMO_PASSWORD=""', 'const PASSWORD_MINIMO = 12', 'if (PASSWORD_X === otra) {}']) caso(`historial: no marca "${linea.split('=')[0]}"`, hallados(linea), [])
+const publica = revisarTexto(armar('sb_publi', 'shable_', 'a'.repeat(24)))
+caso('historial: la clave publishable es aviso, no falla', [publica.hallazgos.length, publica.avisos.length], [0, 1])
+si('historial: nunca devuelve el valor encontrado', !JSON.stringify(revisarTexto(armar('TEST_PASS', 'WORD=Valor-Que-No-Sale1'))).includes('Valor-Que-No-Sale1'))
 
 console.log(`\n${total - fallos}/${total} pruebas OK`)
 if (fallos > 0) process.exit(1)

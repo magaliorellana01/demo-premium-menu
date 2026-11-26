@@ -64,21 +64,21 @@ const NADA = { fila: VACIA, categorias: 0, productos: 0, productosConFoto: 0 }
 const TODO = { fila: LLENA, categorias: 1, productos: 1, productosConFoto: 1 }
 const DUENO = { slug: 'mi-cafe', activo: false, puedeEditarLocal: true, esAdmin: false }
 const hechos = (d, c = DUENO) => primerosPasos(d, c).map((p) => p.hecho)
-caso('seis pasos, en orden', primerosPasos(NADA, DUENO).map((p) => p.clave), ['logo', 'contacto', 'horarios', 'categoria', 'producto', 'publicar'])
-caso('local nuevo: nada hecho', hechos(NADA), [false, false, false, false, false, false])
-caso('todo cargado, sin publicar', hechos(TODO), [true, true, true, true, true, false])
-caso('publicado: completo', resumenDePasos(primerosPasos(TODO, { ...DUENO, activo: true })), { hechos: 6, total: 6, faltan: 0, cargando: false, completo: true })
-caso('cargando: desconocido (menos publicar, que ya se sabe)', hechos(null), [null, null, null, null, null, false])
+caso('siete pasos, en orden', primerosPasos(NADA, DUENO).map((p) => p.clave), ['logo', 'contacto', 'horarios', 'categoria', 'producto', 'publicar', 'qr'])
+caso('local nuevo: nada hecho', hechos(NADA), [false, false, false, false, false, false, false])
+caso('todo cargado, sin publicar', hechos(TODO), [true, true, true, true, true, false, false])
+caso('publicado: completo', resumenDePasos(primerosPasos(TODO, { ...DUENO, activo: true, qrListo: true })), { hechos: 7, total: 7, faltan: 0, cargando: false, completo: true })
+caso('cargando: desconocido (menos publicar y el QR, que ya se saben)', hechos(null), [null, null, null, null, null, false, false])
 caso('cargando nunca cuenta como completo', resumenDePasos(primerosPasos(null, { ...DUENO, activo: true })).completo, false)
 for (const [clave, cambio] of [['logo', { fila: { ...LLENA, logo_url: null } }], ['contacto', { fila: { ...LLENA, whatsapp: null } }], ['horarios', { fila: { ...LLENA, horarios: { semana: { lunes: [] } } } }], ['categoria', { categorias: 0 }], ['producto', { productosConFoto: 0 }]]) {
-  caso(`solo queda pendiente "${clave}"`, primerosPasos({ ...TODO, ...cambio }, { ...DUENO, activo: true }).filter((p) => !p.hecho).map((p) => p.clave), [clave])
+  caso(`solo queda pendiente "${clave}"`, primerosPasos({ ...TODO, ...cambio }, { ...DUENO, activo: true, qrListo: true }).filter((p) => !p.hecho).map((p) => p.clave), [clave])
 }
 caso('un producto sin foto no alcanza', hechos({ ...TODO, productos: 5, productosConFoto: 0 })[4], false)
 si('contacto: alcanza con Instagram', tieneContacto({ instagram: 'mi.cafe' }))
 si('contacto: los datos de ejemplo no cuentan', !tieneContacto({ whatsapp: 'TODO 00000000000', instagram: 'TODO-reemplazar-instagram' }))
 si('contacto: un enlace de otro sitio no cuenta', !tieneContacto({ instagram: 'https://evil.example/x', whatsapp: '123' }))
 const enlaces = (d, c = DUENO) => primerosPasos(d, c).map((p) => p.enlace?.a ?? null)
-caso('cada paso enlaza a su pantalla (dueño)', enlaces(NADA), ['/admin/mi-cafe/ajustes#titulo-logo', '/admin/mi-cafe/ajustes#titulo-info', '/admin/mi-cafe/ajustes#titulo-horarios', '/admin/mi-cafe/categorias', '/admin/mi-cafe/productos', null])
+caso('cada paso enlaza a su pantalla (dueño)', enlaces(NADA), ['/admin/mi-cafe/ajustes#titulo-logo', '/admin/mi-cafe/ajustes#titulo-info', '/admin/mi-cafe/ajustes#titulo-horarios', '/admin/mi-cafe/categorias', '/admin/mi-cafe/productos', null, '/admin/mi-cafe/qr'])
 caso('con categoría y sin productos, va directo a cargar uno', enlaces({ ...NADA, categorias: 1 })[4], '/admin/mi-cafe/productos/nuevo')
 caso('con productos sin foto, va a la lista', enlaces({ ...NADA, categorias: 1, productos: 2 })[4], '/admin/mi-cafe/productos')
 const editor = primerosPasos(NADA, { ...DUENO, puedeEditarLocal: false })

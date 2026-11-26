@@ -467,6 +467,32 @@ try {
   ver(r.error?.code === '23514', 'La base rechaza una categoría con nombre de 61 caracteres', r.error ? msg(r) : 'SE GUARDÓ')
   if (r.data?.[0]?.id) await c1.from('categorias').delete().eq('id', r.data[0].id)
 
+  // supabase/13-limites-publicos.sql. Hasta que se corra, se informa como PENDIENTE (no falla).
+  {
+    const sonda = await c1.from('productos').insert(nuevoProducto({ nombre: `${PREFIJO}limite13`, imagen_url: 'https://otro-sitio.example.com/rastreo.png' })).select('id')
+    if (permitida(sonda)) {
+      await c1.from('productos').delete().eq('id', sonda.data[0].id)
+      salteadas.push('límite de lo que se publica: falta correr supabase/13-limites-publicos.sql (PENDIENTE: la base todavía acepta imágenes de otros sitios)')
+    } else {
+      seccion('Límites de lo que se publica (supabase/13-limites-publicos.sql)')
+      ver(sonda.error?.code === '23514', 'La base rechaza una foto de otro sitio', msg(sonda))
+      for (const [caso, cambio] of Object.entries({
+        'una foto "javascript:"': { imagen_url: 'javascript:alert(1)' },
+        'una foto en la carpeta de otro local': { imagen_url: `${url}/storage/v1/object/public/imagenes/${pruebaPorU2.id}/productos/a-480.webp` },
+        'una descripción de 201 caracteres': { descripcion: 'x'.repeat(201) },
+        '13 etiquetas': { etiquetas: Array.from({ length: 13 }, (_, i) => `e${i}`) },
+        'una etiqueta de 301 caracteres': { etiquetas: ['x'.repeat(301)] },
+      })) {
+        const x = await c1.from('productos').insert(nuevoProducto(cambio)).select('id')
+        ver(x.error?.code === '23514', `La base rechaza ${caso}`, x.error ? msg(x) : 'SE GUARDÓ')
+        if (x.data?.[0]?.id) await c1.from('productos').delete().eq('id', x.data[0].id)
+      }
+      const buena = await c1.from('productos').insert(nuevoProducto({ nombre: `${PREFIJO}foto-propia`, imagen_url: `${url}/storage/v1/object/public/imagenes/${aroma.id}/productos/abc123-480.webp`, descripcion: 'x'.repeat(200) })).select('id')
+      ver(permitida(buena), 'Acepta una foto de su propia carpeta y 200 caracteres', msgOk(buena))
+      if (buena.data?.[0]?.id) await c1.from('productos').delete().eq('id', buena.data[0].id)
+    }
+  }
+
   seccion('Productos: aislamiento entre locales')
   r = await c1.from('productos').insert(nuevoProducto({ categoria_id: pruebaCats[0].id })).select('id')
   ver(r.error?.code === '23503', 'categoria_id de otro local: rechazado al crear', msg(r))
@@ -569,6 +595,31 @@ try {
   s1 = await subir(c1, `${aroma.id}/productos/${PREFIJO}disfrazado-480.webp`, new TextEncoder().encode('esto no es una imagen'), 'image/webp')
   console.log(`NOTA   Un texto declarado como image/webp ${s1.error ? 'se RECHAZA: el bucket revisa el contenido' : 'se ACEPTA: el bucket mira el tipo declarado, no el contenido'}.`)
 
+  // Otras formas de colar algo que el navegador ejecute.
+  for (const [caso, nombre, tipo] of [['SVG con el tipo en mayúsculas', 'mayus.svg', 'IMAGE/SVG+XML'], ['HTML con parámetros en el tipo', 'param.html', 'text/html;charset=utf-8'], ['XHTML', 'x.xhtml', 'application/xhtml+xml'], ['JavaScript', 'x.js', 'text/javascript'], ['XML', 'x.xml', 'application/xml'], ['PDF', 'x.pdf', 'application/pdf']]) {
+    const x = await subir(c1, `${aroma.id}/productos/${PREFIJO}${nombre}`, new TextEncoder().encode('<svg onload="alert(1)"/>'), tipo)
+    ver(Boolean(x.error), `Tipo no permitido: ${caso}`, x.error?.message ?? 'SE SUBIÓ')
+  }
+  // Limitación conocida: el bucket cree en el tipo DECLARADO. Lo que se comprueba es que ese
+  // archivo se entregue con el tipo de imagen declarado, nunca como página.
+  for (const nombre of ['mentira.html', 'mentira.svg']) {
+    const ruta = `${aroma.id}/productos/${PREFIJO}${nombre}`
+    const x = await subir(c1, ruta, new TextEncoder().encode('<!doctype html><script>alert(1)</script>'), 'image/png')
+    if (x.error) {
+      console.log(`NOTA   HTML con nombre ${nombre} y tipo image/png: rechazado (${x.error.message}).`)
+      continue
+    }
+    const servido = await fetch(imagenes(anon).getPublicUrl(ruta).data.publicUrl)
+    const tipo = servido.headers.get('content-type') ?? ''
+    const nosniff = servido.headers.get('x-content-type-options')
+    // Como la imagen declarada, o como texto plano sin adivinar (así lo manda Supabase si el
+    // nombre termina en .html). A las imágenes no siempre les pone nosniff: el navegador igual no
+    // convierte una imagen en página.
+    const base = tipo.split(';')[0].trim()
+    ver(base === 'image/png' || (base === 'text/plain' && nosniff === 'nosniff'), `HTML disfrazado (${nombre}) nunca se entrega como página`, `${tipo} · nosniff: ${nosniff ?? 'sin cabecera'}`)
+    await imagenes(c1).remove([ruta])
+  }
+
   seccion('Fotos: nadie escribe fuera de su carpeta')
   s1 = await subir(c1, `${pruebaPorU2.id}/productos/${PREFIJO}ajena-480.webp`)
   ver(Boolean(s1.error), 'Usuario 1 NO puede subir a local-prueba/productos', s1.error?.message ?? 'SE SUBIÓ')
@@ -601,6 +652,18 @@ try {
   const propia = `${pruebaPorU2.id}/productos/${PREFIJO}propia-480.webp`
   s1 = await subir(c2, propia)
   ver(!s1.error, 'Usuario 2 sube a su propia carpeta', s1.error?.message ?? 'subida')
+  // Con un archivo que SÍ existe en un local inactivo: nadie de afuera puede enterarse listando.
+  ver(await existe(propia), 'Control: el archivo del local de prueba existe y su dueño lo lista')
+  for (const [quien, cliente] of [['Un anónimo', anon], ['Un dueño de otro local', c1]]) {
+    for (const [donde, carpeta] of [['la raíz', ''], ['la carpeta del local inactivo', pruebaPorU2.id], ['sus fotos', `${pruebaPorU2.id}/productos`]]) {
+      const x = await imagenes(cliente).list(carpeta, { limit: 1000 })
+      // En la raíz, un dueño ve como mucho SU carpeta.
+      const ajenas = (x.data ?? []).filter((o) => !(carpeta === '' && cliente === c1 && o.name === aroma.id))
+      ver(Boolean(x.error) || ajenas.length === 0, `${quien} no puede listar ${donde}`, x.error?.message ?? `${ajenas.length} entrada(s) ajenas`)
+    }
+  }
+  const conUrl = await fetch(imagenes(anon).getPublicUrl(propia).data.publicUrl)
+  console.log(`NOTA   Con la dirección exacta, la foto de un local INACTIVO ${conUrl.ok ? 'se puede ver' : 'no se ve'} (HTTP ${conUrl.status}): el bucket es público. La dirección no se puede listar.`)
   await imagenes(c1).remove([propia])
   ver(await existe(propia), 'Usuario 1 NO puede borrar una foto del local de prueba')
 

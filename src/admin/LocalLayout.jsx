@@ -11,6 +11,7 @@ const SECCIONES = [
   { ruta: 'categorias', nombre: 'Categorías' },
   { ruta: 'productos', nombre: 'Productos' },
   { ruta: 'ajustes', nombre: 'Ajustes' },
+  { ruta: 'qr', nombre: 'QR' },
 ]
 
 // /admin/:slug: encabezado (local, quién ingresó y su rol, salir), navegación y la página elegida.

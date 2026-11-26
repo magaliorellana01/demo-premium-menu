@@ -65,17 +65,22 @@ export async function abrirChrome({ ancho = 375, alto = 740 } = {}) {
 
   const dialogos = []
   const pedidos = []
+  const consola = [] // todo lo que la página escribe en la consola, y sus errores
   escuchas.push((m) => {
     if (m.method === 'Page.javascriptDialogOpening') {
       dialogos.push(m.params.type)
       enviar('Page.handleJavaScriptDialog', { accept: false }).catch(() => {})
     }
+    if (m.method === 'Runtime.consoleAPICalled') consola.push({ tipo: m.params.type, texto: m.params.args.map((a) => a.value ?? JSON.stringify(a.preview?.properties) ?? a.description ?? '').join(' ') })
+    if (m.method === 'Runtime.exceptionThrown') consola.push({ tipo: 'excepcion', texto: m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text })
+    if (m.method === 'Log.entryAdded') consola.push({ tipo: `navegador-${m.params.entry.level}`, texto: `${m.params.entry.text} ${m.params.entry.url ?? ''}` })
     if (m.method === 'Network.requestWillBeSent') pedidos.push({ metodo: m.params.request.method, url: m.params.request.url })
   })
 
   await enviar('Page.enable')
   await enviar('Runtime.enable')
   await enviar('Network.enable')
+  await enviar('Log.enable')
   await enviar('Emulation.setDeviceMetricsOverride', { width: ancho, height: alto, deviceScaleFactor: 1, mobile: ancho < 700 })
 
   /** Ejecuta una función en la página (los argumentos van como JSON). */
@@ -113,6 +118,9 @@ export async function abrirChrome({ ancho = 375, alto = 740 } = {}) {
     clicar,
     dialogos,
     pedidos,
+    consola,
+    puerto: Number(puerto), // para conectar otra herramienta (Lighthouse) a este Chrome
+    enviar, // cualquier otra orden del protocolo (imprimir, descargas, capturas)
     ir: (url) => enviar('Page.navigate', { url }),
     escribir: (texto) => enviar('Input.insertText', { text: texto }),
     async cerrar() {

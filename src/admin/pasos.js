@@ -14,10 +14,10 @@ export function tieneContacto(fila) {
 /**
  * La lista, siempre con los mismos ítems y en el mismo orden.
  *   datos:  { fila, categorias, productos, productosConFoto }  o null mientras carga
- *   contexto: { slug, activo, puedeEditarLocal, esAdmin }
+ *   contexto: { slug, activo, puedeEditarLocal, esAdmin, qrListo }  (qrListo: ver qrListo.js)
  * Devuelve [{ clave, titulo, ayuda, hecho (true | false | null si carga), enlace: { a, texto } | null, nota }]
  */
-export function primerosPasos(datos, { slug, activo, puedeEditarLocal, esAdmin }) {
+export function primerosPasos(datos, { slug, activo, puedeEditarLocal, esAdmin, qrListo = false }) {
   const base = `/admin/${slug}`
   const si = (condicion) => (datos ? Boolean(condicion()) : null)
   // Los datos del local los carga el dueño: a un editor no se lo manda a una pantalla de solo lectura.
@@ -44,6 +44,14 @@ export function primerosPasos(datos, { slug, activo, puedeEditarLocal, esAdmin }
       hecho: Boolean(activo),
       enlace: esAdmin ? { a: '/admin/clientes', texto: 'Ir a clientes' } : null,
       nota: esAdmin ? '' : 'Cuando esté todo, avisanos.',
+    },
+    {
+      clave: 'qr',
+      titulo: 'Descargá tu QR',
+      ayuda: 'Para las mesas o el mostrador. Queda marcado en este dispositivo al descargarlo o imprimirlo.',
+      hecho: Boolean(qrListo),
+      enlace: { a: `${base}/qr`, texto: 'Ir al QR' },
+      nota: '',
     },
   ]
 }

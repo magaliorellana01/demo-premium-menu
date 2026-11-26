@@ -4,9 +4,12 @@
 //   usuario 1 = owner de "aroma"                (TEST_USER1_EMAIL / TEST_USER1_PASSWORD)
 //   usuario 2 = owner solo de "local-prueba"    (TEST_USER2_EMAIL / TEST_USER2_PASSWORD)
 //   anónimo   = sin sesión
+//   editor    = editor solo de "local-prueba" (TEST_EDITOR_*)  } opcionales: los crea y los borra
+//   admin     = admin de OESTACK de pruebas   (TEST_ADMIN_*)   } npm run pruebas:usuarios
 //
 // Requiere haber corrido supabase/08-admin-base.sql, 09-admin-categorias.sql,
-// 10-admin-productos.sql y 11-admin-ajustes.sql. Uso:  npm run verificar:permisos
+// 10-admin-productos.sql, 11-admin-ajustes.sql y 12-admin-clientes.sql.
+// Uso:  npm run verificar:permisos
 //
 // Las credenciales salen de .env (que no se versiona); las contraseñas nunca se imprimen.
 //
@@ -21,6 +24,9 @@
 // se restauran. Si una corrida se corta, la siguiente restaura desde ese archivo antes de nada.
 // Lo único que no vuelve atrás es updated_at (lo pone la base). El slug y el estado activo solo
 // se INTENTAN cambiar: tienen que ser rechazados.
+//
+// El admin prueba "activo" SOLO sobre un local temporal (slug zz-prueba-permisos-...) que crea y
+// borra: nunca activa ni desactiva aroma ni local-prueba. Acá nunca se usa la clave secreta.
 import { createClient } from '@supabase/supabase-js'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -59,6 +65,14 @@ const crear = () => createClient(url, clave, { auth: { persistSession: false, au
 const anon = crear()
 const c1 = crear()
 const c2 = crear()
+const c3 = crear() // editor
+const c4 = crear() // admin
+const par = (nombre) => [process.env[`TEST_${nombre}_EMAIL`], process.env[`TEST_${nombre}_PASSWORD`]]
+const opcionales = { editor: par('EDITOR'), admin: par('ADMIN') }
+const hayEditor = opcionales.editor.every(Boolean)
+const hayAdmin = opcionales.admin.every(Boolean)
+const salteadas = []
+const SLUG_TEMPORAL = 'zz-prueba-permisos-local'
 
 let fallos = 0
 let total = 0
@@ -106,6 +120,11 @@ async function restaurarLocales(copias) {
 async function limpiarTemporales() {
   // Borra todo lo que empiece con el prefijo en ambos locales (también restos de una corrida anterior).
   const errores = []
+  if (contexto.admin) {
+    // El local temporal del admin (se lleva sus categorías, productos y membresías).
+    const t = await c4.from('locales').delete().like('slug', 'zz-prueba-permisos-%').select('id')
+    if (t.error) errores.push(`local temporal: ${t.error.message}`)
+  }
   for (const [cliente, nombre] of [[c1, 'aroma'], [c2, 'local-prueba']]) {
     const p = await cliente.from('productos').delete().like('nombre', `${PREFIJO}%`).select('id')
     if (p.error) errores.push(`productos (${nombre}): ${p.error.message}`)
@@ -155,6 +174,10 @@ try {
   const id1 = await entrar(c1, credenciales.u1, 'usuario 1')
   const id2 = await entrar(c2, credenciales.u2, 'usuario 2')
   ver(id1 !== id2, 'Los dos usuarios de prueba son personas distintas')
+  if (hayAdmin) {
+    await entrar(c4, opcionales.admin, 'admin de pruebas')
+    contexto.admin = true
+  }
   await limpiarTemporales()
   if (fs.existsSync(COPIA)) {
     const errores = await restaurarLocales(JSON.parse(fs.readFileSync(COPIA, 'utf8')))
@@ -755,7 +778,7 @@ try {
     ver(!l.error, 'Usuario 2 (dueño) sube un logo a su propio local', l.error?.message ?? 'subido')
     l = await logos(c1).remove([`${aroma.id}/logo/${miLogo}`])
     ver(!l.error && l.data.length === 1 && !(await sigue(c1, aroma.id, miLogo)), 'Usuario 1 borra su logo', l.error?.message ?? `${l.data.length} borrado`)
-    console.log('NOTA   No hay un usuario editor de prueba: que un editor no escriba en logo/ depende de las políticas del SQL 11 (ver su control); esta corrida no lo prueba.')
+    if (!hayEditor) console.log('NOTA   Sin usuario editor, que no pueda escribir en logo/ no se prueba acá (ver "Editor real").')
 
     seccion('Ajustes: restaurar las filas originales')
     const errores = await restaurarLocales(contexto.copias)
@@ -763,6 +786,168 @@ try {
     if (errores.length === 0) {
       fs.rmSync(COPIA)
       contexto.restaurados = true
+    }
+  }
+
+  // ═══ EDITOR REAL (Tarea 12) ══════════════════════════════════
+  // La misma consulta que usa la vista de clientes, con los permisos de cada uno.
+  const consultaClientes = (cliente) => cliente.from('locales').select('id, slug, nombre, activo, updated_at, categorias(count), productos(count)')
+  if (!hayEditor) {
+    salteadas.push('editor (faltan TEST_EDITOR_EMAIL y TEST_EDITOR_PASSWORD: npm run pruebas:usuarios)')
+  } else {
+    seccion('Editor real: su rol')
+    const id3 = await entrar(c3, opcionales.editor, 'editor')
+    const mem3 = await c3.from('usuarios_locales').select('rol, local_id')
+    ver(!mem3.error && mem3.data.length === 1 && mem3.data[0].local_id === pruebaPorU2.id && mem3.data[0].rol === 'editor', 'Es editor de local-prueba y de ningún otro', mem3.error ? msg(mem3) : mem3.data.map((m) => m.rol).join())
+    ver((await c3.from('admins').select('user_id')).data?.length === 0, 'No es admin')
+
+    seccion('Editor real: edita categorías y productos de SU local')
+    r = await c3.from('categorias').insert({ local_id: pruebaPorU2.id, nombre: `${PREFIJO}editor`, activa: false, orden: 996 }).select('id')
+    const catEditor = r.data?.[0]?.id
+    ver(permitida(r), 'Crea una categoría', msgOk(r))
+    r = await c3.from('categorias').update({ nombre: `${PREFIJO}editor2`, adicionales: [{ nombre: 'Extra', precio: 1 }] }).eq('id', catEditor ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'La edita (nombre y adicionales)', msgOk(r))
+    r = await c3.from('productos').insert({ local_id: pruebaPorU2.id, categoria_id: catEditor, nombre: `${PREFIJO}p-editor`, precio: 10, disponible: false }).select('id')
+    const prodEditor = r.data?.[0]?.id
+    ver(permitida(r), 'Crea un producto', msgOk(r))
+    r = await c3.from('productos').update({ precio: 20, destacado: true }).eq('id', prodEditor ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'Lo edita', msgOk(r))
+    const orden = await c3.rpc('reordenar_productos', { p_local_id: pruebaPorU2.id, p_categoria_id: catEditor ?? UUID_INEXISTENTE, p_ids: [prodEditor ?? UUID_INEXISTENTE] })
+    ver(!orden.error, 'Reordena con la función', orden.error ? msg(orden) : 'ok')
+    const fotoEditor = `${pruebaPorU2.id}/productos/${PREFIJO}editor-480.webp`
+    const subeFoto = await c3.storage.from('imagenes').upload(fotoEditor, new Blob([WEBP_MINIMO], { type: 'image/webp' }), { contentType: 'image/webp' })
+    if (!subeFoto.error) creadas.archivos.push([c2, fotoEditor])
+    ver(!subeFoto.error, 'Sube la foto de un producto', subeFoto.error?.message ?? 'subida')
+    r = await c3.from('productos').delete().eq('id', prodEditor ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'Borra el producto', msgOk(r))
+    r = await c3.from('categorias').delete().eq('id', catEditor ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'Borra la categoría', msgOk(r))
+
+    seccion('Editor real: NO puede cambiar ajustes')
+    const filaPrueba = async () => JSON.stringify((await c2.from('locales').select('*').eq('id', pruebaPorU2.id).single()).data)
+    const antesEditor = await filaPrueba()
+    const cambiosEditor = {
+      nombre: { nombre: 'Hackeado' }, descripcion: { descripcion: 'x' }, direccion: { direccion: 'x' }, whatsapp: { whatsapp: '5491100000000' }, instagram: { instagram: 'x' },
+      horarios: { horarios: {} }, aviso: { aviso_texto: 'x', aviso_activo: true }, tema: { tema: {} }, logo_url: { logo_url: null }, activo: { activo: true }, slug: { slug: 'zz-prueba-permisos-editor' },
+    }
+    for (const [caso, cambios] of Object.entries(cambiosEditor)) {
+      // Si entrara (no debía), la comparación con la fila lo marca.
+      const x = await c3.from('locales').update(cambios).eq('id', pruebaPorU2.id).select('id')
+      ver(bloqueada(x) && (await filaPrueba()) === antesEditor, `Editor NO puede cambiar ${caso}`, msg(x))
+    }
+    r = await c3.from('locales').delete().eq('id', pruebaPorU2.id).select('id')
+    ver(bloqueada(r), 'Editor NO puede borrar su local', msg(r))
+    r = await c3.from('usuarios_locales').update({ rol: 'owner' }).eq('user_id', id3).select()
+    ver(bloqueada(r), 'Editor NO puede hacerse dueño', msg(r))
+    r = await c3.from('admins').insert({ user_id: id3 }).select()
+    ver(bloqueada(r), 'Editor NO puede hacerse admin', msg(r))
+
+    seccion('Editor real: la carpeta del logo es solo del dueño y los admins')
+    const nombreLogo = `${PREFIJO}del-dueno-8x10.webp`
+    const logoDelDueno = `${pruebaPorU2.id}/logo/${nombreLogo}`
+    const puesto = await c2.storage.from('imagenes').upload(logoDelDueno, new Blob([WEBP_MINIMO], { type: 'image/webp' }), { contentType: 'image/webp' })
+    if (!puesto.error) creadas.archivos.push([c2, logoDelDueno])
+    ver(!puesto.error, 'El dueño pone un logo de prueba', puesto.error?.message ?? 'subido')
+    const estaElLogo = async () => (await archivosDe(c2, pruebaPorU2.id)).includes(logoDelDueno)
+    const subirComoEditor = async (ruta, opciones = {}) => {
+      const x = await c3.storage.from('imagenes').upload(ruta, new Blob([PNG_MINIMO], { type: 'image/png' }), { contentType: 'image/png', ...opciones })
+      if (!x.error) creadas.archivos.push([c2, ruta])
+      return x
+    }
+    let subida = await subirComoEditor(`${pruebaPorU2.id}/logo/${PREFIJO}editor.png`)
+    ver(Boolean(subida.error), 'Editor NO puede subir a logo/', subida.error?.message ?? 'SE SUBIÓ')
+    const suelto = `${pruebaPorU2.id}/logo.${PREFIJO}png`
+    subida = await subirComoEditor(suelto)
+    ver(Boolean(subida.error), 'Tampoco un "logo.<ext>" suelto en la carpeta del local', subida.error?.message ?? 'SE SUBIÓ')
+    subida = await subirComoEditor(logoDelDueno, { upsert: true })
+    const peso = (await c2.storage.from('imagenes').list(`${pruebaPorU2.id}/logo`)).data?.find((o) => o.name === nombreLogo)?.metadata?.size
+    ver(Boolean(subida.error) && peso === WEBP_MINIMO.length, 'Editor NO puede reemplazar el logo', subida.error?.message ?? 'SE REEMPLAZÓ')
+    await c3.storage.from('imagenes').remove([logoDelDueno])
+    ver(await estaElLogo(), 'Editor NO puede borrar el logo (sigue ahí)')
+    const sacado = `${pruebaPorU2.id}/productos/${PREFIJO}sacado-480.webp`
+    let movida = await c3.storage.from('imagenes').move(logoDelDueno, sacado)
+    if (!movida.error) creadas.archivos.push([c2, sacado])
+    ver(Boolean(movida.error) && (await estaElLogo()), 'Editor NO puede sacar el logo de su carpeta moviéndolo', movida.error?.message ?? 'SE MOVIÓ')
+    const colado = `${pruebaPorU2.id}/logo/${PREFIJO}colado.webp`
+    movida = await c3.storage.from('imagenes').move(fotoEditor, colado)
+    if (!movida.error) creadas.archivos.push([c2, colado])
+    ver(Boolean(movida.error) && !(await archivosDe(c2, pruebaPorU2.id)).includes(colado), 'Editor NO puede meter una foto en logo/ moviéndola', movida.error?.message ?? 'SE MOVIÓ')
+
+    seccion('Editor real: nada de otros locales')
+    r = await c3.from('productos').update({ precio: aromaProd.precio }).eq('id', aromaProd.id).select('id')
+    ver(bloqueada(r), 'NO puede editar un producto de aroma', msg(r))
+    r = await c3.from('categorias').insert({ local_id: aroma.id, nombre: `${PREFIJO}intrusa-editor`, activa: false }).select('id')
+    ver(bloqueada(r), 'NO puede crear una categoría en aroma', msg(r))
+    const enAroma = `${aroma.id}/productos/${PREFIJO}editor-480.webp`
+    const ajena = await c3.storage.from('imagenes').upload(enAroma, new Blob([WEBP_MINIMO], { type: 'image/webp' }), { contentType: 'image/webp' })
+    if (!ajena.error) creadas.archivos.push([c1, enAroma])
+    ver(Boolean(ajena.error), 'NO puede subir fotos a aroma', ajena.error?.message ?? 'SE SUBIÓ')
+  }
+
+  // ═══ ADMIN REAL (Tarea 12) ═══════════════════════════════════
+  if (!hayAdmin) {
+    salteadas.push('admin (faltan TEST_ADMIN_EMAIL y TEST_ADMIN_PASSWORD: npm run pruebas:usuarios)')
+  } else {
+    seccion('Admin real: ve todos los locales')
+    const id4 = (await c4.auth.getUser()).data.user.id
+    const mio = await c4.from('admins').select('user_id')
+    ver(!mio.error && mio.data.length === 1 && mio.data[0].user_id === id4, 'Figura en admins (y solo ve su propia fila)', mio.error ? msg(mio) : `${mio.data.length} fila(s)`)
+    ver((await c4.from('usuarios_locales').select('local_id').eq('user_id', id4)).data?.length === 0, 'No es miembro de ningún local: lo que puede es por ser admin')
+    const todos = await consultaClientes(c4)
+    const fAroma = todos.data?.find((l) => l.id === aroma.id)
+    ver(!todos.error && Boolean(fAroma) && todos.data.some((l) => l.id === pruebaPorU2.id), 'La consulta de clientes le trae también un local inactivo ajeno', todos.error ? msg(todos) : `${todos.data.length} local(es)`)
+    ver(fAroma?.categorias[0].count === (await contar(c1, 'categorias', { local_id: aroma.id })) && fAroma?.productos[0].count === (await contar(c1, 'productos', { local_id: aroma.id })), 'Los conteos de aroma coinciden con los que ve su dueño', `${fAroma?.categorias[0].count} categorías, ${fAroma?.productos[0].count} productos`)
+
+    seccion('Admin real: cambia "activo" contra la base real (en un local temporal)')
+    let t = await c4.from('locales').insert({ slug: SLUG_TEMPORAL, nombre: `${PREFIJO}local`, activo: false }).select('*')
+    const temporal = t.data?.[0]
+    ver(permitida(t), 'Admin crea un local temporal (inactivo)', msgOk(t))
+    if (temporal) {
+      const leerTemporal = async () => JSON.stringify((await c4.from('locales').select('*').eq('id', temporal.id).maybeSingle()).data)
+      const publico = async () => (await anon.from('locales').select('id').eq('slug', SLUG_TEMPORAL)).data?.length
+      ver((await publico()) === 0, 'Inactivo: el público no lo ve')
+      ver(!(await consultaClientes(c2)).data?.some((l) => l.id === temporal.id), 'Un dueño de otro local no lo ve mientras está inactivo')
+      if (hayEditor) ver(!(await consultaClientes(c3)).data?.some((l) => l.id === temporal.id), 'El editor tampoco')
+
+      t = await c4.from('locales').update({ activo: true }).eq('id', temporal.id).select('activo')
+      ver(permitida(t) && t.data[0].activo === true, 'El ADMIN lo ACTIVA', msgOk(t))
+      ver((await publico()) === 1, 'Activo: el público lo ve')
+      t = await c4.from('locales').update({ activo: false }).eq('id', temporal.id).select('activo')
+      ver(permitida(t) && t.data[0].activo === false, 'El ADMIN lo DESACTIVA', msgOk(t))
+      ver((await publico()) === 0, 'Inactivo de nuevo: el público no lo ve')
+
+      const asignado = await c4.from('usuarios_locales').insert({ user_id: id2, local_id: temporal.id, rol: 'owner' }).select()
+      ver(permitida(asignado), 'El admin le asigna un dueño', msgOk(asignado))
+      t = await c2.from('locales').update({ descripcion: 'del dueño' }).eq('id', temporal.id).select('id')
+      ver(permitida(t), 'Ese dueño edita los datos de su local', msgOk(t))
+      let quieto = await leerTemporal()
+      t = await c2.from('locales').update({ activo: true }).eq('id', temporal.id).select('id')
+      ver(t.error?.code === '42501' && (await leerTemporal()) === quieto, 'El DUEÑO NO puede activar su propio local', msg(t))
+      for (const [quien, cliente] of [['el dueño', c2], ['el admin', c4], ['el dueño de otro local', c1], ...(hayEditor ? [['el editor', c3]] : []), ['un anónimo', anon]]) {
+        const x = await cliente.from('locales').update({ slug: 'zz-prueba-permisos-otro' }).eq('id', temporal.id).select('id')
+        ver(bloqueada(x) && (await leerTemporal()) === quieto, `Nadie cambia el slug: ${quien}`, msg(x))
+      }
+      for (const [caso, cambios] of Object.entries({ id: { id: UUID_INEXISTENTE }, updated_at: { updated_at: '2000-01-01T00:00:00Z' } })) {
+        const x = await c4.from('locales').update(cambios).eq('id', temporal.id).select('id')
+        ver(x.error?.code === '42501' && (await leerTemporal()) === quieto, `Ni el admin cambia ${caso}`, msg(x))
+      }
+      t = await c2.from('locales').delete().eq('id', temporal.id).select('id')
+      ver(bloqueada(t) && (await leerTemporal()) === quieto, 'El dueño NO puede borrar el local', msg(t))
+
+      seccion('Slugs reservados (supabase/12-admin-clientes.sql)')
+      for (const slug of ['admin', 'login', 'clientes', 'cuenta']) {
+        const x = await c4.from('locales').insert({ slug, nombre: `${PREFIJO}reservado`, activo: false }).select('id')
+        // Si entrara (falta el SQL 12), se borra en el momento.
+        if (permitida(x)) await c4.from('locales').delete().eq('id', x.data[0].id)
+        ver(x.error?.code === '23514', `La base rechaza el slug "${slug}"`, x.error ? msg(x) : 'SE CREÓ (¿falta el SQL 12?)')
+      }
+      t = await c4.from('admins').insert({ user_id: id2 }).select()
+      ver(bloqueada(t), 'Ni un admin puede sumar admins desde la aplicación', msg(t))
+
+      t = await c4.from('locales').delete().eq('id', temporal.id).select('id')
+      ver(permitida(t), 'El admin borra el local temporal', msgOk(t))
+      quieto = (await c2.from('usuarios_locales').select('local_id')).data
+      ver(quieto?.length === 1 && quieto[0].local_id === pruebaPorU2.id, 'El dueño vuelve a tener solo su local')
     }
   }
 
@@ -859,8 +1044,9 @@ try {
   } catch (e) {
     ver(false, 'La limpieza terminó con un error', e.message)
   }
-  await Promise.allSettled([c1.auth.signOut(), c2.auth.signOut()])
+  await Promise.allSettled([c1, c2, c3, c4].map((c) => c.auth.signOut({ scope: 'local' })))
 
+  for (const que of salteadas) console.log(`\nSALTEADO  No se probó el ${que}.`)
   console.log(`\n${total - fallos}/${total} comprobaciones OK${fallos ? ` · ${fallos} FALLÓ` : ''}`)
   process.exit(fallos ? 1 : 0)
 }

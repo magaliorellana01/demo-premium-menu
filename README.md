@@ -5,9 +5,9 @@ y un panel de administración. Es una sola app (React + Vite) que sirve a todos 
 único proyecto de Supabase (Postgres + Auth + Storage) y datos separados por local (multi-tenant).
 
 - Menú público: `/:slug` (ej. `/aroma`)
-- Panel de administración: `/admin` (login, permisos, categorías, productos con fotos y ajustes del local)
+- Panel de administración: `/admin` (login, permisos, categorías, productos con fotos, ajustes del local, cuenta y clientes)
 
-Estado: **Tarea 11** (ajustes del local: datos, horarios, aviso, colores y logo). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
+Estado: **Tarea 12** (alta de clientes, cuenta del usuario y vista de clientes). El menú público está completo (portada, información del local, etiquetas con filtros, variantes y adicionales).
 
 ## Cómo correrlo
 
@@ -35,7 +35,9 @@ Ver `.env.example`. Van en `.env` (ignorado por git).
 
 Vite incorpora estas variables al momento del build: si se cambian, hay que volver a publicar.
 
-**Nunca** uses ni expongas la clave `service_role` en el frontend ni en `.env`: saltea toda la seguridad.
+**La clave secreta** (`sb_secret_...`, o la vieja `service_role`) saltea toda la seguridad. Nunca va en el frontend (`src/`), nunca con
+prefijo `VITE_`, nunca en git ni en el hosting. La única excepción es `SUPABASE_SECRET_KEY` en el `.env` de **tu computadora**, que usan
+los scripts de clientes (ver "Clientes"). Control: `npm run verificar:secretos`.
 
 Variables nuevas (solo para `npm run verificar:permisos`, ver "Panel de administración"): `TEST_USER1_EMAIL`, `TEST_USER1_PASSWORD`,
 `TEST_USER2_EMAIL` y `TEST_USER2_PASSWORD`. Son credenciales de usuarios de **prueba**, van solo en `.env` (que no se versiona) y no empiezan
@@ -78,7 +80,8 @@ La anon key es pública por diseño; lo que protege los datos son las políticas
 14. Para administrar productos: correr `supabase/10-admin-productos.sql` (ver "Productos" más abajo).
 15. Para los ajustes del local: correr `supabase/11-admin-ajustes.sql` (ver "Ajustes" más abajo). Si alguna vez se vuelve a correr
     `schema.sql`, hay que volver a correr el `11` después: `schema.sql` devuelve el permiso de actualizar toda la tabla (el trigger sigue protegiendo).
-16. `npm run dev` y abrir `/aroma`.
+16. Para el alta de clientes: correr `supabase/12-admin-clientes.sql` (ver "Clientes" más abajo).
+17. `npm run dev` y abrir `/aroma`.
 
 ## Comprobar que se puede leer pero no escribir
 
@@ -114,12 +117,16 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs   Pruebas de lógica pura (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs, probar-cuenta.mjs, probar-clientes.mjs   Pruebas de lógica pura (npm run probar)
   verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
+  verificar-secretos.mjs   Busca claves secretas en el repo y en dist/ (npm run verificar:secretos)
+  probar-atras.mjs      "Atrás" y "adelante" con cambios sin guardar, en Chrome (npm run probar:atras)
+  clientes/             Alta, contraseña, estado y baja de clientes, y usuarios de prueba (solo en tu computadora)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
   lib/logo.mjs          Recorte del logo y medición del símbolo (lo usan los dos scripts)
+  lib/                  También: secretos.mjs (detector), env-archivo.mjs y chrome.mjs (Chrome sin dependencias)
   fuentes/              Liberation Serif Italic (subconjunto latino, TTF) para escribir la frase en la imagen social
 src/
   lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
@@ -145,6 +152,7 @@ supabase/
   09-admin-categorias.sql   Función para reordenar categorías de forma atómica
   10-admin-productos.sql    Límites de nombres y precio, y función para reordenar productos
   11-admin-ajustes.sql      Protección de columnas de locales, validaciones, updated_at y carpeta del logo
+  12-admin-clientes.sql     Slugs reservados del panel y permisos de los scripts de clientes
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -307,14 +315,16 @@ vacía no aparece nada. Siguen visibles mientras se busca o se filtra dentro de 
 
 ## Panel de administración (`/admin`)
 
-Cada local edita su propio menú desde `/admin`: ingreso y permisos, **categorías**, **productos** con fotos y **ajustes** del local.
+Cada local edita su propio menú desde `/admin`: ingreso y permisos, **categorías**, **productos** con fotos, **ajustes** del local y **su cuenta**.
 
 **Rutas**
-- `/admin/login`: ingreso con email y contraseña (sin "olvidé mi contraseña": las contraseñas se resetean desde el dashboard de Supabase).
+- `/admin/login`: ingreso con email y contraseña (sin "olvidé mi contraseña": se genera una temporal con `npm run cliente:password`).
+- `/admin/cuenta`: email y rol, **cambiar contraseña** y salir. Se llega desde "Mi cuenta", en el encabezado.
+- `/admin/clientes`: todos los locales, **solo para admins** de OESTACK (ver "Vista de clientes").
 - `/admin`: va directo al único local del usuario; si tiene varios, o es admin de OESTACK, muestra un selector.
 - `/admin/:slug`: panel del local con *Inicio* (resumen: estado, cantidad de categorías y productos, enlace al menú público), *Categorías*,
   *Productos* y *Ajustes*. Se usa bien desde el celular.
-- Todas llevan `<meta name="robots" content="noindex">`. Los slugs `admin` y `login` están reservados (un local no puede llamarse así).
+- Todas llevan `<meta name="robots" content="noindex">`. Los slugs `admin`, `login`, `clientes` y `cuenta` están reservados en la base (un local no puede llamarse así).
 - Sin sesión, cualquier ruta protegida lleva al login (y vuelve a donde se quería ir). Con sesión pero sin permiso sobre ese local aparece
   "No tenés acceso a este local", sin revelar si el local existe. Si la sesión vence, se vuelve al login con el aviso "Tu sesión venció".
 
@@ -455,33 +465,105 @@ lo escrito. Arriba (o al costado desde 1100 px) hay una **vista previa** con los
   `columnas_editables` = las 10 de ajustes más `activo`, `update_de_tabla = false`, `anon_puede_actualizar = false`, `trigger_proteccion = 1`,
   `limites = 9`, `politicas_logo = 3`, `politicas_locales = 5`, `rechaza_css = true`, `rechaza_superpuestos = true`, `locales_cumplen = true`.
 
+### Mi cuenta y primeros pasos
+
+- **Cambiar contraseña** (`/admin/cuenta`): pide la actual (se comprueba ingresando de nuevo con ella) y la nueva dos veces. Política: 12 a 72
+  caracteres con minúscula, mayúscula, número y símbolo (`src/admin/contrasena.js`). La pantalla avisa, pero **lo que obliga es lo que esté
+  configurado en Supabase** (ver "Configuración manual"). No usa mails.
+- **Primeros pasos** (Inicio): logo, contacto (WhatsApp o Instagram; los datos `TODO` no cuentan), horarios, primera categoría, primer producto
+  con foto y publicar. Cada uno se marca según los datos reales y enlaza a su pantalla; a un editor no se lo manda a Ajustes. Con el menú
+  sin publicar va arriba; ya publicado, plegado al final; con todo cumplido, no aparece. (Aroma lo muestra plegado: su contacto es de ejemplo.)
+
+### Vista de clientes (`/admin/clientes`)
+
+Solo para admins: nombre, dirección, estado, cantidad de categorías y de productos, cuándo se modificaron **los datos del local** (`updated_at` no
+cambia al editar categorías o productos), enlaces al menú y al panel, y activar o desactivar con confirmación. Es una sola consulta con conteos
+(no necesita funciones SQL). A quien no es admin no se le muestra ni se consulta nada. **Alcance real de la seguridad:** los locales activos son
+de lectura pública por diseño (son el menú), así que cualquiera con la clave pública puede listarlos; lo que la base impide es ver locales
+inactivos ajenos y que cambie `activo` quien no es admin.
+
 ### Configuración manual en Supabase (una sola vez)
 
 1. **Desactivar el registro público:** *Authentication > Sign In / Providers* (en algunos proyectos: *Authentication > Providers > Email*) y apagar
    **Allow new users to sign up**. Así nadie puede crearse una cuenta solo: los usuarios los creamos nosotros.
-2. **Contraseñas:** en la misma sección, subir **Minimum password length** a 12 como mínimo y exigir letras y números (y, si querés, mayúsculas y símbolos).
-   Activar también *Prevent use of leaked passwords* si el plan lo permite.
-3. **Confirmación de email:** como los usuarios se crean a mano, al crearlos se marca **Auto Confirm User** (ver abajo).
+2. **Contraseñas:** en la misma sección, **Minimum password length** 12 y, en los caracteres requeridos, la opción que incluye
+   **minúsculas, mayúsculas, números y símbolos** (la que no incluye símbolos deja pasar contraseñas que el panel rechaza). Activar también
+   *Prevent use of leaked passwords* si el plan lo permite (según la documentación, desde el plan Pro).
+3. **Confirmación de email:** los usuarios se crean con el email ya confirmado (el script lo hace solo; a mano, marcando **Auto Confirm User**).
+4. **Contraseña actual (recomendado):** activar **Require current password when changing password** y guardar. Así la base también exige la
+   contraseña actual (sin esto, solo la pide la pantalla). Dejar **apagado** *Require reauthentication when changing password* (o *Secure password
+   change*): manda un código por mail, y el servicio por defecto no sirve para eso (ver abajo).
+5. **Comprobar que se aplica:** que el interruptor figure activado no alcanza. Con un usuario descartable, pedir `updateUser` sin
+   `current_password` y con una contraseña sin símbolo: los dos tienen que ser rechazados. En las pruebas del 25/11/2026 **los dos se aceptaban**
+   (sí se rechazaban menos de 12 caracteres, la falta de mayúsculas y repetir la anterior).
 
-### Crear un usuario de cliente (paso a paso)
+#### Los mails de Supabase
 
-1. En Supabase: *Authentication > Users > Add user > Create new user*. Poner el email y una contraseña larga, y **tildar "Auto Confirm User"**. Crear.
-2. En *SQL Editor* correr (cambiando el email, el slug del local y, si corresponde, el rol `owner` o `editor`):
-   ```sql
-   insert into public.usuarios_locales (user_id, local_id, rol)
-   select u.id, l.id, 'owner'
-   from auth.users u, public.locales l
-   where u.email = 'cliente@ejemplo.com' and l.slug = 'el-slug-del-local'
-   on conflict (user_id, local_id) do update set rol = excluded.rol;
-   ```
-3. Pasarle al cliente el email y la contraseña por un canal seguro; entra en `/admin/login`.
-4. **Admin de OESTACK** (ve y gestiona todos los locales):
-   ```sql
-   insert into public.admins (user_id)
-   select id from auth.users where email = 'tu-email@ejemplo.com'
-   on conflict (user_id) do nothing;
-   ```
-5. Resetear una contraseña: *Authentication > Users*, menú del usuario (los tres puntos) > enviar recuperación o cambiar la contraseña desde ahí.
+Según la [documentación](https://supabase.com/docs/guides/auth/auth-smtp), el servicio de mail **por defecto** solo entrega a direcciones del equipo
+del proyecto (a las demás falla con *Email address not authorized*), permite **2 mails por hora**, no garantiza la entrega y no es para
+producción. Por eso nada del alta ni del cambio de contraseña depende de un mail. Para usar mails con clientes haría falta un SMTP propio.
+
+### Clientes: alta, contraseña, estado y baja
+
+Estos comandos se corren **en tu computadora** y usan la clave secreta. Antes: correr `supabase/12-admin-clientes.sql` una vez y definir
+`VITE_PUBLIC_URL` en el `.env` con la dirección real del sitio (si falta, los enlaces de la ficha apuntan a `localhost`).
+
+**Tu propio acceso de admin:** `/admin/clientes` solo la ven los admins. Para agregarte: sección 4 de `supabase/08-admin-base.sql`, con tu email.
+
+**Cómo conseguir la clave secreta** (una sola vez)
+
+1. En https://supabase.com/dashboard, entrá al proyecto: **Project Settings > API Keys**.
+2. En **Secret keys**, copiá la que empieza con `sb_secret_` (si no hay ninguna, creala ahí).
+3. En el `.env` del proyecto, agregá la línea `SUPABASE_SECRET_KEY=` y pegá la clave después del igual.
+4. No la pegues en chats, mails ni mensajes, no le pongas `VITE_` adelante y no la cargues en el hosting. Si se filtra, borrala en esa pantalla y creá otra.
+
+**En PowerShell el `--` va entre comillas** (`'--'`): sin comillas, PowerShell lo borra y npm se queda con las opciones. Los scripts lo detectan y
+frenan. En otras consolas se escribe `--` sin comillas. Sin opciones, preguntan lo que falta. Todos aceptan `--dry-run` (muestra qué harían
+y no escribe) y piden confirmación antes de escribir.
+
+**Ejemplo completo de un alta**
+
+```powershell
+npm run alta:cliente '--' --nombre "Café del Puerto" --slug cafe-del-puerto --email dueno@ejemplo.com --dry-run
+npm run alta:cliente '--' --nombre "Café del Puerto" --slug cafe-del-puerto --email dueno@ejemplo.com
+```
+
+1. Valida el slug (3 a 40, minúsculas, números y guiones; sin tildes; no reservado ni usado) y el email, muestra el resumen y pide escribir `si`.
+   **El slug no se puede cambiar después:** va impreso en el QR.
+2. Crea el local **inactivo**, con colores neutros y sin horarios ni textos (cualquier texto inventado se publicaría como del cliente), el usuario
+   con el email confirmado y una contraseña temporal de 16 caracteres, y lo agrega como dueño. Si algo falla en el medio, deshace lo que creó; si
+   no puede, dice qué quedó y con qué comando limpiarlo. Repetir el mismo alta no duplica nada, y un alta que quedó a medias se completa.
+3. Muestra **una sola vez** la ficha para copiar y mandarle al cliente (enlaces, email, contraseña temporal y qué hacer). No se guarda en
+   ningún archivo: no redirijas la salida a un archivo. La ficha no incluye nada sobre la clave secreta.
+4. El cliente entra, cambia la contraseña en **Mi cuenta** y sigue los **Primeros pasos**. Cuando termina, publicás el menú desde
+   `/admin/clientes` o con `cliente:estado`.
+
+Si la persona ya tiene usuario (por ejemplo, un segundo local): agregá `--usuario-existente`. No se le toca la contraseña.
+
+**Otros comandos**
+
+```powershell
+npm run cliente:password '--' --email dueno@ejemplo.com
+npm run cliente:estado '--' --slug cafe-del-puerto --activo si
+npm run cliente:baja '--' --slug cafe-del-puerto --con-usuarios
+npm run cliente:baja '--' --email dueno@ejemplo.com
+```
+
+- `cliente:password`: genera otra temporal y reemplaza la anterior; la muestra una vez. Para un admin o un usuario de la demo pide además el email
+  completo. Las sesiones abiertas ya no se pueden renovar (una que esté en uso puede seguir funcionando hasta que venza su token, por defecto una hora).
+- `cliente:estado`: publica (`--activo si`) u oculta (`--activo no`). Para `aroma` y `local-prueba` pide además escribir el slug.
+- `cliente:baja`: **no se puede deshacer.** Muestra todo lo que va a borrar y pide dos confirmaciones (`si` y escribir el slug, o el email si es
+  solo un usuario). `--slug` borra el local con sus categorías, productos, membresías y archivos de Storage; `--con-usuarios` borra además a
+  quienes queden sin ningún local (nunca a un admin ni a quien tenga otro local). No borra `aroma`, `local-prueba`, sus usuarios ni admins sin
+  `--permitir-protegidos`.
+
+> **Antes de venderlo:** el título inicial, la descripción, la vista previa al compartir (Open Graph), el favicon, el manifest y la precarga del
+> logo de `index.html` son **fijos y de Aroma**, igual que las pantallas de "local no encontrado" y de error. El enlace de un cliente se
+> comparte con la vista previa de Aroma. Resolverlo requiere una tarea aparte.
+
+**Alta a mano** (si no querés usar la clave secreta): crear el usuario en *Authentication > Users* con **Auto Confirm User** y asignarlo desde el
+SQL Editor (plantillas en la sección 5 de `supabase/08-admin-base.sql`). Un **admin de OESTACK** solo se agrega desde el SQL Editor (sección 4)
+o, para pruebas, con `pruebas:usuarios`.
 
 ### Usuarios de prueba y verificación de permisos
 
@@ -490,17 +572,34 @@ lo escrito. Arriba (o al costado desde 1100 px) hay una **vista previa** con los
    Deja al usuario 1 como `owner` de `aroma`, crea el local **`local-prueba`** (inactivo, con una categoría y un producto) y deja al usuario 2 como `owner`
    solo de ese local. Se puede correr más de una vez.
 3. Completar en `.env` (no se versiona) `TEST_USER1_EMAIL`, `TEST_USER1_PASSWORD`, `TEST_USER2_EMAIL` y `TEST_USER2_PASSWORD`.
-4. `npm run verificar:permisos` comprueba contra Supabase real, con la clave anon: que el usuario 1 lee y escribe en su local; que no puede modificar ni crear nada
-   en `local-prueba`; que el usuario 2 no puede tocar `aroma`; que un anónimo no puede escribir en ninguna tabla; que las imágenes solo se suben a la carpeta del
-   propio local; las categorías (crear, editar, borrar, adicionales inválidos, borrado con productos y reordenar con la función 09, incluidos los
-   intentos que deben fallar); los productos (crear, editar, borrar, límites de la base, categoría de otro local y reordenar con la función 10);
-   las fotos en Storage (tipos y tamaño no permitidos, caché y que nadie escriba, borre ni liste carpetas ajenas); los ajustes (el dueño edita su local; no puede cambiar `slug`, `id`, `activo` ni
-   `updated_at`; la base rechaza temas, enlaces y horarios inválidos; el logo en su carpeta); y que nadie lee el local inactivo desde el menú público. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales
-   inactivas y archivos con el mismo prefijo) y al final verifica que todo quedó como estaba. **Requiere haber corrido hasta el `11`.**
-   Las pruebas de ajustes escriben sobre las filas **reales** de `aroma` y `local-prueba` (mientras corre, `/aroma` muestra datos de prueba);
-   antes las copia (también a un archivo en la carpeta temporal del sistema) y al final las restaura, salvo `updated_at`. Si se corta,
-   la corrida siguiente restaura primero. No conviene correrlo mientras se muestra la demo. Falta un usuario `editor` de prueba.
-5. `npm run probar` corre además las pruebas de lógica pura de permisos y del formulario de ingreso (`scripts/probar-permisos.mjs`), sin red.
+4. **Editor y admin de prueba:** `npm run pruebas:usuarios '--' crear` crea `zz-prueba-editor@example.com` (editor de `local-prueba`) y
+   `zz-prueba-admin@example.com` (admin), con contraseñas aleatorias que escribe **solo** en tu `.env` (nunca en pantalla). Usa la clave secreta
+   y no manda mails. **El admin de prueba puede ver y cambiar todos los locales:** al terminar, borralos con
+   `npm run pruebas:usuarios '--' borrar` (también limpia el `.env`).
+5. `npm run verificar:permisos` comprueba contra Supabase real, con la clave anon (nunca con la secreta): que el usuario 1 lee y escribe en su
+   local; que no puede modificar ni crear nada en `local-prueba`; que el usuario 2 no puede tocar `aroma`; que un anónimo no puede escribir en
+   ninguna tabla; que las imágenes solo se suben a la carpeta del propio local; las categorías (crear, editar, borrar, adicionales inválidos,
+   borrado con productos y reordenar con la función 09, incluidos los intentos que deben fallar); los productos (crear, editar, borrar, límites de
+   la base, categoría de otro local y reordenar con la función 10); las fotos en Storage (tipos y tamaño no permitidos, caché y que nadie
+   escriba, borre ni liste carpetas ajenas); los ajustes (el dueño edita su local; no puede cambiar `slug`, `id`, `activo` ni `updated_at`; la
+   base rechaza temas, enlaces y horarios inválidos); que nadie lee el local inactivo desde el menú público; y, si están los usuarios del paso 4:
+   el **editor** edita categorías y productos pero no los ajustes ni la carpeta del logo; el **admin** cambia `activo` y el dueño no; nadie cambia
+   el `slug`; y la base rechaza los slugs reservados. Sin esos usuarios, esas partes se informan como `SALTEADO`.
+6. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales inactivas y archivos con el mismo prefijo) y al final verifica
+   que todo quedó como estaba. **Requiere haber corrido hasta el `12`.** Las pruebas de ajustes escriben sobre las filas **reales** de `aroma` y
+   `local-prueba` (mientras corre, `/aroma` muestra datos de prueba); antes las copia (también a un archivo en la carpeta temporal del sistema)
+   y al final las restaura, salvo `updated_at`. Si se corta, la corrida siguiente restaura primero. No conviene correrlo mientras se muestra la
+   demo. El admin prueba `activo` solo sobre un local temporal que crea y borra.
+7. `npm run probar` corre las pruebas de lógica pura, sin red.
+
+### Otras comprobaciones
+
+- `npm run verificar:secretos` (mejor después de `npm run build`, y siempre antes de commitear): falla si encuentra una clave `sb_secret_...`, un
+  JWT con rol `service_role`, una variable secreta con valor, un `VITE_` con nombre de secreto, o los valores secretos de tu `.env`, en lo
+  versionado (y lo nuevo sin ignorar) o en `dist/`. No muestra lo que encontró. No revisa el historial viejo de git.
+- `npm run probar:atras`: compila y, en el Chrome instalado (sin dependencias; Node 22 o más nuevo), comprueba que con cambios sin guardar
+  "atrás", "adelante", las pestañas y recargar pregunten antes. Usa el usuario de prueba 1 y no guarda nada. Correrlo al tocar `main.jsx`, las
+  rutas, `lib/atras.js`, `GuardaDeSalida.jsx` o al actualizar React Router. Si Chrome está en otra ruta, definir `CHROME_PATH`.
 
 ## Medir el rendimiento (Lighthouse)
 

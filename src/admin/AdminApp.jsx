@@ -9,6 +9,7 @@ import PaginaClientes from './PaginaClientes'
 import PaginaCuenta from './PaginaCuenta'
 import PaginaProducto from './PaginaProducto'
 import PaginaProductos from './PaginaProductos'
+import PaginaQR from './PaginaQR'
 import PantallaAviso from './PantallaAviso'
 import Resumen from './Resumen'
 import RutaProtegida from './RutaProtegida'
@@ -62,6 +63,7 @@ export default function AdminApp() {
                 <Route path="productos/nuevo" element={<PaginaProducto />} />
                 <Route path="productos/:productoId" element={<PaginaProducto />} />
                 <Route path="ajustes" element={<PaginaAjustes />} />
+                <Route path="qr" element={<PaginaQR />} />
                 <Route path="*" element={<PaginaNoEncontrada />} />
               </Route>
               <Route path="*" element={<PaginaNoEncontrada />} />

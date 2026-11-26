@@ -76,5 +76,79 @@ for (const tabla of ['usuarios_locales', 'admins']) {
   resultado(Boolean(r.error) || r.data.length === 0, `Leer ${tabla}`, r.error ? `${r.error.code} ${r.error.message}` : '0 filas')
 }
 
+// ── Lo que un anónimo puede leer (Tarea 13, docs/seguridad.md) ──
+console.log('\n— Lectura anónima: solo las columnas del menú —')
+// La lista completa de lo público A PROPÓSITO. Si aparece una columna nueva, esto falla para
+// que alguien decida si puede ser pública (la lectura anónima está dada por TABLA).
+const PUBLICAS = {
+  locales: 'activo,aviso_activo,aviso_texto,descripcion,direccion,horarios,id,instagram,logo_url,nombre,slug,tema,updated_at,whatsapp',
+  categorias: 'activa,adicionales,id,local_id,nombre,orden',
+  productos: 'categoria_id,descripcion,destacado,disponible,etiquetas,id,imagen_url,local_id,nombre,orden,precio,variantes',
+}
+const leido = []
+for (const [tabla, columnas] of Object.entries(PUBLICAS)) {
+  r = await supabase.from(tabla).select('*')
+  leido.push(...(r.data ?? []))
+  const vistas = Object.keys(r.data?.[0] ?? {}).sort().join()
+  resultado(!r.error && vistas === columnas, `${tabla}: ni más ni menos que las columnas esperadas`, r.error?.message ?? (vistas === columnas ? `${columnas.split(',').length} columnas, ${r.data.length} fila(s)` : `se ven: ${vistas}`))
+}
+const textoPublico = JSON.stringify(leido)
+resultado(!/[\w.+-]+@[\w-]+\.[a-z]{2,}/i.test(textoPublico) && !textoPublico.includes('user_id'), 'Ningún email ni id de usuario en lo que se lee')
+
+console.log('\n— Locales inactivos y contenido oculto: no se pueden listar —')
+for (const [que, consulta] of [
+  ['locales inactivos (filtro activo=false)', supabase.from('locales').select('id').eq('activo', false)],
+  ['el local de prueba, por slug', supabase.from('locales').select('id').eq('slug', 'local-prueba')],
+  ['el local de prueba, buscando por parte del slug', supabase.from('locales').select('id').like('slug', '%prueba%')],
+  ['categorías ocultas', supabase.from('categorias').select('id').eq('activa', false)],
+  ['categorías de locales inactivos (por relación)', supabase.from('categorias').select('id, locales!inner(activo)').eq('locales.activo', false)],
+  ['productos de locales inactivos (por relación)', supabase.from('productos').select('id, locales!inner(activo)').eq('locales.activo', false)],
+]) {
+  r = await consulta
+  resultado(!r.error && r.data.length === 0, `No se leen ${que}`, r.error?.message ?? `${r.data.length} filas`)
+}
+const visibles = (await supabase.from('locales').select('id')).data?.length
+r = await supabase.from('locales').select('*', { count: 'exact', head: true })
+resultado(!r.error && r.count === visibles, 'Contar filas tampoco delata locales ocultos', `${r.count} contados, ${visibles} visibles`)
+
+console.log('\n— Otras puertas (deben estar cerradas) —')
+r = await supabase.from('locales').select('slug, usuarios_locales(*)')
+resultado(Boolean(r.error), 'Leer membresías pidiéndolas como relación de un local', r.error ? msg(r) : 'SE LEYERON')
+const U = '00000000-0000-0000-0000-000000000000'
+for (const [funcion, args] of [['es_admin', {}], ['es_miembro', { p_local_id: U }], ['es_owner', { p_local_id: U }], ['reordenar_categorias', { p_local_id: U, p_ids: [] }], ['reordenar_productos', { p_local_id: U, p_categoria_id: U, p_ids: [] }], ['tema_valido', { p_tema: {} }], ['horarios_validos', { p_horarios: {} }]]) {
+  r = await supabase.rpc(funcion, args)
+  resultado(r.error?.code === '42501', `Ejecutar la función ${funcion}`, r.error ? `${r.error.code} ${r.error.message}` : 'SE EJECUTÓ')
+}
+for (const esquema of ['auth', 'storage']) {
+  r = await supabase.schema(esquema).from('users').select('*')
+  resultado(Boolean(r.error), `Leer el esquema interno "${esquema}"`, r.error ? msg(r) : 'SE LEYÓ')
+}
+const cabeceras = { apikey: key, Authorization: `Bearer ${key}` }
+for (const [que, ruta] of [['la descripción de toda la API (OpenAPI)', '/rest/v1/'], ['la lista de usuarios (API de administración)', '/auth/v1/admin/users']]) {
+  const x = await fetch(`${url}${ruta}`, { headers: cabeceras })
+  resultado(x.status === 401 || x.status === 403, `Leer ${que}`, `HTTP ${x.status}`)
+}
+
+console.log('\n— Storage: un anónimo no puede listar —')
+// Que haya archivos y aun así no se listen se comprueba en verificar:permisos (necesita sesión).
+const cubos = await supabase.storage.listBuckets()
+resultado(Boolean(cubos.error) || cubos.data.length === 0, 'Listar los buckets', cubos.error?.message ?? `${cubos.data.length} bucket(s)`)
+for (const carpeta of ['', localId, `${localId}/productos`, `${localId}/logo`]) {
+  const x = await supabase.storage.from('imagenes').list(carpeta, { limit: 100 })
+  resultado(Boolean(x.error) || x.data.length === 0, `Listar ${carpeta ? `la carpeta ${carpeta.replace(localId, '<aroma>')}` : 'la raíz del bucket'}`, x.error?.message ?? `${x.data.length} entradas`)
+}
+
+console.log('\n— Registro de usuarios nuevos (debe estar cerrado) —')
+const ajustes = await (await fetch(`${url}/auth/v1/settings`, { headers: { apikey: key } })).json()
+resultado(ajustes.disable_signup === true, 'La configuración pública dice que el registro está desactivado')
+// Con el registro abierto no se intenta: ya quedó informado y así no se crea ningún usuario.
+if (ajustes.disable_signup === true) {
+  const sinSesion = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, storageKey: 'zz-registro' } })
+  const alta = await sinSesion.auth.signUp({ email: 'zz-prueba-permisos-registro@example.com', password: `Zz!9-${crypto.randomUUID()}` })
+  resultado(Boolean(alta.error) && !alta.data?.session, 'Registrarse desde la API: rechazado', alta.error ? `${alta.error.status} ${alta.error.code}` : 'SE CREÓ: borrá zz-prueba-permisos-registro@example.com en Authentication > Users')
+  const anonimo = await sinSesion.auth.signInAnonymously()
+  resultado(Boolean(anonimo.error) && !anonimo.data?.session, 'Entrar como usuario anónimo de Auth: rechazado', anonimo.error ? `${anonimo.error.status} ${anonimo.error.code}` : 'SE ACEPTÓ: desactivalo en Authentication > Sign In / Providers y borrá ese usuario')
+}
+
 console.log(fallos === 0 ? '\nTodo en orden: se puede leer el menú y no escribir.' : `\n${fallos} comprobación(es) fallaron: revisá las políticas.`)
 process.exit(fallos === 0 ? 0 : 1)

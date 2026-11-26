@@ -31,7 +31,7 @@ Ver `.env.example`. Van en `.env` (ignorado por git).
 | ------------------------ | ------------------------------------------------------------------- |
 | `VITE_SUPABASE_URL`      | URL del proyecto (`https://xxxx.supabase.co`)                       |
 | `VITE_SUPABASE_ANON_KEY` | Clave pública `anon` / `publishable`                                |
-| `VITE_PUBLIC_URL`        | Dirección pública del sitio, sin barra final (`https://menu.oestack.com`). Se usa en las etiquetas Open Graph, que necesitan URLs absolutas. Si falta, quedan relativas (sirve en desarrollo, no para compartir) |
+| `VITE_PUBLIC_URL`        | Dirección pública del sitio, sin barra final (`https://menu.oestack.com`). Se usa en las etiquetas Open Graph, que necesitan URLs absolutas, y es **lo que codifica el QR** (`<VITE_PUBLIC_URL>/<slug>`). Si falta, las etiquetas quedan relativas (sirve en desarrollo, no para compartir) y el panel no genera QR |
 
 Vite incorpora estas variables al momento del build: si se cambian, hay que volver a publicar.
 
@@ -117,9 +117,10 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs, probar-cuenta.mjs, probar-clientes.mjs, probar-demo.mjs   Pruebas de lógica pura (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs, probar-cuenta.mjs, probar-clientes.mjs, probar-demo.mjs, probar-qr.mjs   Pruebas de lógica pura (npm run probar)
   verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
-  verificar-secretos.mjs   Busca claves secretas en el repo y en dist/ (npm run verificar:secretos)
+  verificar-secretos.mjs   Busca claves secretas en el repo, en dist/ y, con --historial, en git (npm run verificar:secretos)
+  verificar-auth.mjs    Registro, contraseñas y cierre de sesión contra Supabase real (npm run verificar:auth)
   probar-atras.mjs      "Atrás" y "adelante" con cambios sin guardar, en Chrome (npm run probar:atras)
   clientes/             Alta, contraseña, estado y baja de clientes, y usuarios de prueba (solo en tu computadora)
   demo/                 Cuenta demo: demo:guardar, demo:reiniciar y la copia versionada (aroma.json)
@@ -127,7 +128,7 @@ scripts/
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
   lib/logo.mjs          Recorte del logo y medición del símbolo (lo usan los dos scripts)
-  lib/                  También: secretos.mjs (detector), env-archivo.mjs y chrome.mjs (Chrome sin dependencias)
+  lib/                  También: secretos.mjs (detector), historial.mjs (historial de git), env-archivo.mjs y chrome.mjs (Chrome sin dependencias)
   fuentes/              Liberation Serif Italic (subconjunto latino, TTF) para escribir la frase en la imagen social
 src/
   lib/                  supabasePublico.js (cliente liviano), locales.js (getLocal), imagenes.js (srcset), formato.js, useLocal.js,
@@ -155,6 +156,9 @@ supabase/
   11-admin-ajustes.sql      Protección de columnas de locales, validaciones, updated_at y carpeta del logo
   12-admin-clientes.sql     Slugs reservados del panel y permisos de los scripts de clientes
   12b-tope-demo.sql         Tope de 60 archivos en la carpeta de la demo (Storage)
+  13-limites-publicos.sql   Direcciones de imágenes y largo de los textos que se publican
+docs/
+  seguridad.md          Revisión de seguridad: hallazgos, riesgos aceptados, pendientes y cabeceras para Vercel
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -473,8 +477,23 @@ lo escrito. Arriba (o al costado desde 1100 px) hay una **vista previa** con los
   caracteres con minúscula, mayúscula, número y símbolo (`src/admin/contrasena.js`). La pantalla avisa, pero **lo que obliga es lo que esté
   configurado en Supabase** (ver "Configuración manual"). No usa mails.
 - **Primeros pasos** (Inicio): logo, contacto (WhatsApp o Instagram; los datos `TODO` no cuentan), horarios, primera categoría, primer producto
-  con foto y publicar. Cada uno se marca según los datos reales y enlaza a su pantalla; a un editor no se lo manda a Ajustes. Con el menú
+  con foto, publicar y descargar el QR. Cada uno se marca según los datos reales (el del QR, **solo en el navegador** donde se descargó o
+  imprimió: no hay tabla para eso) y enlaza a su pantalla; a un editor no se lo manda a Ajustes. Con el menú
   sin publicar va arriba; ya publicado, plegado al final; con todo cumplido, no aparece. (Aroma lo muestra plegado: su contacto es de ejemplo.)
+
+### Código QR (`/admin/:slug/qr`)
+
+Para dueños, editores y admins. El QR lleva a `VITE_PUBLIC_URL + "/" + slug`, sin parámetros. **Si cambiás de dominio, los QR impresos
+dejan de funcionar:** confirmá la dirección antes de imprimir. Sin `VITE_PUBLIC_URL` (o si es `localhost`, una IP, no usa `https://` o
+trae carpetas o parámetros) la pantalla lo explica y no genera nada. Un local inactivo puede generar su QR, con aviso.
+
+- **Descargas:** PNG (2072 px para `aroma`; nunca menos de 2048) y SVG vectorial para imprenta (`qr-<slug>.png` / `.svg`).
+- **Tarjeta de mesa:** nombre, "Escaneá para ver el menú", QR y la dirección para tipear. **A6** (una) o **A4** (cuatro, con guías de
+  corte). Se imprime con la ventana del navegador (CSS `@media print`), a escala 100 %.
+- Siempre negro sobre blanco, con margen de 4 módulos y corrección de errores M o superior (no usa los colores del local).
+- Se genera en el navegador. La librería (`uqr`) y el dibujo van en un archivo aparte que se descarga solo ahí
+  (`GeneradorQR.jsx`, que a propósito no importa nada del panel para no agregar código al menú público). `npm run probar` decodifica
+  el resultado con otro lector (`jsqr`, solo para pruebas).
 
 ### Vista de clientes (`/admin/clientes`)
 
@@ -496,7 +515,8 @@ inactivos ajenos y que cambie `activo` quien no es admin.
    contraseña actual (sin esto, solo la pide la pantalla). Dejar **apagado** *Require reauthentication when changing password* (o *Secure password
    change*): manda un código por mail, y el servicio por defecto no sirve para eso (ver abajo).
 5. **Comprobar que se aplica:** que el interruptor figure activado no alcanza. Con un usuario descartable, pedir `updateUser` sin
-   `current_password` y con una contraseña sin símbolo: los dos tienen que ser rechazados. En las pruebas del 25/11/2026 **los dos se aceptaban**
+   `current_password` y con una contraseña sin símbolo: los dos tienen que ser rechazados. `npm run verificar:auth` lo prueba solo. El
+   26/11/2026 ya se rechazaba el cambio sin la actual, pero **la contraseña sin símbolo se seguía aceptando**
    (sí se rechazaban menos de 12 caracteres, la falta de mayúsculas y repetir la anterior).
 
 #### Los mails de Supabase
@@ -655,7 +675,11 @@ cuenta: `npm run cliente:baja '--' --email demo@oestack.com --permitir-protegido
 - `npm run verificar:secretos` (mejor después de `npm run build`, y siempre antes de commitear): falla si encuentra una clave `sb_secret_...`, un
   JWT con rol `service_role`, una variable secreta con valor, un `VITE_` con nombre de secreto o con contraseña, o los valores secretos de tu `.env`, en lo
   versionado (y lo nuevo sin ignorar) o en `dist/`. La única excepción: la contraseña de la demo (`VITE_DEMO_PASSWORD`) puede estar en `dist/`
-  (no en el repo); falla si repite cualquier otra clave o contraseña. No muestra lo que encontró. No revisa el historial viejo de git.
+  (no en el repo); falla si repite cualquier otra clave o contraseña. No muestra lo que encontró. Con `npm run verificar:secretos '--' --historial` revisa además todo el historial de git (todas las ramas,
+  el último stash y los mensajes de commit).
+- `npm run verificar:auth`: registro cerrado, reglas de contraseña, cambio con la actual y cierre de sesión. Usa la clave secreta solo
+  para crear y borrar un usuario descartable. Correrlo después de tocar *Authentication* en Supabase.
+- La revisión de seguridad completa y las cabeceras propuestas para Vercel están en [`docs/seguridad.md`](docs/seguridad.md).
 - `npm run probar:atras`: compila y, en el Chrome instalado (sin dependencias; Node 22 o más nuevo), comprueba que con cambios sin guardar
   "atrás", "adelante", las pestañas y recargar pregunten antes. Usa el usuario de prueba 1 y no guarda nada. Correrlo al tocar `main.jsx`, las
   rutas, `lib/atras.js`, `GuardaDeSalida.jsx` o al actualizar React Router. Si Chrome está en otra ruta, definir `CHROME_PATH`.

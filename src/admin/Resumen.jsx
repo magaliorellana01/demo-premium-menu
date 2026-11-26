@@ -5,6 +5,7 @@ import { leerLocal } from './datosAjustes'
 import { descripcionDeRol, nombreDeRol } from './permisos'
 import PrimerosPasos from './PrimerosPasos'
 import { primerosPasos } from './pasos'
+import { leerQrListo } from './qrListo'
 import Alerta from './ui/Alerta'
 import Boton from './ui/Boton'
 import Tarjeta from './ui/Tarjeta'
@@ -33,7 +34,7 @@ export default function Resumen() {
 
   const valor = (campo) => (estado.cargando ? <span className="adm-esqueleto" aria-hidden="true" /> : estado.datos ? estado.datos[campo] : '–')
 
-  const pasos = primerosPasos(estado.datos, { slug: local.slug, activo: local.activo, puedeEditarLocal: permisos.puedeEditarLocal, esAdmin: permisos.esAdmin })
+  const pasos = primerosPasos(estado.datos, { slug: local.slug, activo: local.activo, puedeEditarLocal: permisos.puedeEditarLocal, esAdmin: permisos.esAdmin, qrListo: leerQrListo(local.id) })
   // Sin publicar, la lista va arriba (es lo que hay que hacer); publicado, plegada al final,
   // donde aparecer después de cargar no mueve nada.
   const mostrarPasos = !estado.error
@@ -94,9 +95,9 @@ export default function Resumen() {
         ) : (
           <p className="adm-texto--suave">El menú público no se muestra mientras el local esté inactivo.</p>
         )}
-        <p className="adm-texto--suave">
-          <strong>Página del QR:</strong> próximamente.
-        </p>
+        <div className="ui-acciones">
+          <Boton to={`/admin/${local.slug}/qr`}>Código QR y tarjeta para imprimir</Boton>
+        </div>
       </section>
 
       {mostrarPasos && local.activo && <PrimerosPasos pasos={pasos} plegada />}

@@ -11,8 +11,9 @@
     "verificar:rls": "node --env-file=.env scripts/verificar-rls.mjs",
     "imagenes": "node scripts/optimizar-imagenes.mjs",
     "marca": "node scripts/generar-marca.mjs",
-    "probar": "node scripts/probar-horarios.mjs && node scripts/probar-contacto.mjs && node scripts/probar-filtros.mjs && node scripts/probar-precios.mjs && node scripts/probar-permisos.mjs && node scripts/probar-categorias.mjs && node scripts/probar-productos.mjs && node scripts/probar-ajustes.mjs && node scripts/probar-cuenta.mjs && node scripts/probar-clientes.mjs && node scripts/probar-demo.mjs",
+    "probar": "node scripts/probar-horarios.mjs && node scripts/probar-contacto.mjs && node scripts/probar-filtros.mjs && node scripts/probar-precios.mjs && node scripts/probar-permisos.mjs && node scripts/probar-categorias.mjs && node scripts/probar-productos.mjs && node scripts/probar-ajustes.mjs && node scripts/probar-cuenta.mjs && node scripts/probar-clientes.mjs && node scripts/probar-demo.mjs && node scripts/probar-qr.mjs",
     "verificar:permisos": "node --env-file=.env scripts/verificar-permisos.mjs",
+    "verificar:auth": "node --env-file=.env scripts/verificar-auth.mjs",
     "verificar:secretos": "node scripts/verificar-secretos.mjs",
     "probar:atras": "vite build && node --env-file=.env scripts/probar-atras.mjs",
     "alta:cliente": "node --env-file=.env scripts/clientes/alta.mjs",
@@ -28,10 +29,12 @@
     "@supabase/supabase-js": "^2.119.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.6"
+    "react-router-dom": "^7.18.6",
+    "uqr": "0.1.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.3.0",
+    "jsqr": "1.4.0",
     "oxlint": "^1.94.0",
     "sharp": "^0.35.5",
     "vite": "^8.3.8"

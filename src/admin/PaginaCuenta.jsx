@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
+import { SIN_CAMBIO_DE_PASSWORD } from './demo'
 import Encabezado from './Encabezado'
+import { esSesionDemo } from './entornoDemo'
 import FormularioPassword from './FormularioPassword'
 import { nombreDeRol } from './permisos'
 import Boton from './ui/Boton'
@@ -18,6 +20,8 @@ export default function PaginaCuenta() {
   const { acceso } = useAcceso()
   const { usuario, cerrarSesion } = useSesion()
   const roles = rolesDe(acceso)
+  // Solo la interfaz: la API de Supabase no deja impedir el cambio (demo:reiniciar la repone).
+  const esDemo = esSesionDemo(usuario)
 
   return (
     <div className="adm-pagina">
@@ -55,9 +59,9 @@ export default function PaginaCuenta() {
 
         <Tarjeta como="section" className="adm-bloque" aria-labelledby="titulo-password">
           <h2 id="titulo-password" className="adm-subtitulo">
-            Cambiar contraseña
+            {esDemo ? 'Contraseña' : 'Cambiar contraseña'}
           </h2>
-          <FormularioPassword email={usuario?.email ?? ''} />
+          {esDemo ? <p data-aviso="sin-cambio">{SIN_CAMBIO_DE_PASSWORD}</p> : <FormularioPassword email={usuario?.email ?? ''} />}
         </Tarjeta>
       </main>
     </div>

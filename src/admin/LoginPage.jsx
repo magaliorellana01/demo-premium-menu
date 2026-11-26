@@ -1,19 +1,23 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import BotonVer from './BotonVer'
 import PantallaCarga from './PantallaCarga'
 import { iniciarSesion } from './datos'
-import { mensajeErrorLogin, validarLogin } from './login'
+import { mensajeDeErrorDemo } from './demo'
+import { CREDENCIALES_DEMO } from './entornoDemo'
+import { MENSAJE_CREDENCIALES, mensajeErrorLogin, validarLogin } from './login'
 import { destinoTrasLogin } from './permisos'
 import Alerta from './ui/Alerta'
 import Boton from './ui/Boton'
 import Campo from './ui/Campo'
 import Tarjeta from './ui/Tarjeta'
+import TarjetaDemo from './TarjetaDemo'
 import { useSesion } from './useSesion'
 
 export default function LoginPage() {
   const { cargando, usuario, vencida } = useSesion()
   const ubicacion = useLocation()
+  const navegar = useNavigate()
   const id = useId()
   const emailRef = useRef(null)
   const passwordRef = useRef(null)
@@ -24,6 +28,7 @@ export default function LoginPage() {
   const [enviando, setEnviando] = useState(false)
   const [errores, setErrores] = useState({}) // { email?, password? } de la validación
   const [errorGeneral, setErrorGeneral] = useState('') // error al ingresar (se anuncia en la región aria-live)
+  const [demo, setDemo] = useState({ entrando: false, error: '' }) // el botón "Entrar a la demo"
   const montado = useRef(true)
 
   useEffect(() => {
@@ -39,7 +44,7 @@ export default function LoginPage() {
 
   const alEnviar = async (evento) => {
     evento.preventDefault()
-    if (enviando) return
+    if (enviando || demo.entrando) return
     setErrorGeneral('')
 
     const revision = validarLogin({ email, password })
@@ -59,6 +64,18 @@ export default function LoginPage() {
       setPassword('') // la contraseña se borra; el email queda para corregir
       passwordRef.current?.focus()
     }
+  }
+
+  const entrarALaDemo = async () => {
+    if (enviando || demo.entrando) return
+    setErrorGeneral('')
+    setErrores({})
+    setDemo({ entrando: true, error: '' })
+    // La demo entra a su panel, no a la pantalla donde estaba quien usó antes este navegador.
+    navegar(ubicacion.pathname, { replace: true, state: null })
+    const { error } = await iniciarSesion(CREDENCIALES_DEMO.email, CREDENCIALES_DEMO.password)
+    if (!montado.current) return
+    setDemo({ entrando: false, error: error ? mensajeDeErrorDemo(mensajeErrorLogin(error), MENSAJE_CREDENCIALES) : '' })
   }
 
   const idError = `${id}-error`
@@ -122,6 +139,8 @@ export default function LoginPage() {
           </form>
         </div>
       </Tarjeta>
+
+      {CREDENCIALES_DEMO && <TarjetaDemo credenciales={CREDENCIALES_DEMO} entrando={demo.entrando} error={demo.error} onEntrar={entrarALaDemo} />}
     </main>
   )
 }

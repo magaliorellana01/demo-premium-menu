@@ -34,8 +34,18 @@ export function crearBase(cliente) {
     throw new Error('Hay demasiados usuarios para recorrerlos.')
   }
 
+  /** Todo, de a mil: la API corta ahí y no avisa. */
+  async function todo(pagina) {
+    const filas = []
+    for (let desde = 0; ; desde += 1000) {
+      const tanda = await pagina(desde)
+      filas.push(...tanda)
+      if (tanda.length < 1000) return filas
+    }
+  }
+
   async function archivosDe(carpeta) {
-    const lista = await pedir('listar Storage', cliente.storage.from(BUCKET).list(carpeta, { limit: 1000 }))
+    const lista = await todo((offset) => pedir('listar Storage', cliente.storage.from(BUCKET).list(carpeta, { limit: 1000, offset })))
     const rutas = []
     for (const objeto of lista) {
       const ruta = `${carpeta}/${objeto.name}`
@@ -65,9 +75,10 @@ export function crearBase(cliente) {
       const usuario = (await usuarios()).find((u) => u.email?.toLowerCase() === email)
       return usuario ? { id: usuario.id, email: usuario.email } : null
     },
-    async crearUsuario(email, password) {
+    /** `marca`: app_metadata, que el propio usuario no puede cambiar. */
+    async crearUsuario(email, password, marca) {
       // Email ya confirmado: no se envía ningún mail.
-      const data = await pedir('crear el usuario', cliente.auth.admin.createUser({ email, password, email_confirm: true }))
+      const data = await pedir('crear el usuario', cliente.auth.admin.createUser({ email, password, email_confirm: true, ...(marca && { app_metadata: marca }) }))
       return { id: data.user.id, email: data.user.email }
     },
     borrarUsuario: (id) => pedir('borrar el usuario', cliente.auth.admin.deleteUser(id)),
@@ -89,5 +100,20 @@ export function crearBase(cliente) {
       return Boolean(await pedir('leer los admins', cliente.from('admins').select('user_id').eq('user_id', userId).maybeSingle()))
     },
     hacerAdmin: (userId) => pedir('agregar el admin', cliente.from('admins').upsert({ user_id: userId }, { onConflict: 'user_id' })),
+
+    // ── Para la demo (scripts/demo/) ──
+    async listarUsuarios() {
+      return (await usuarios()).map((u) => ({ id: u.id, email: u.email, marca: u.app_metadata?.oestack_demo ?? null }))
+    },
+    leerLocal: (slug) => pedir('leer el local', cliente.from('locales').select('*').eq('slug', slug).maybeSingle()),
+    actualizarLocal: (id, cambios) => pedir('restaurar los datos del local', cliente.from('locales').update(cambios).eq('id', id).select('id').single()),
+    listarFilas: (tabla, localId) =>
+      todo((desde) => pedir(`leer ${tabla}`, cliente.from(tabla).select('*').eq('local_id', localId).order('id').range(desde, desde + 999))),
+    async guardarFilas(tabla, filas) {
+      for (let i = 0; i < filas.length; i += 100) await pedir(`restaurar ${tabla}`, cliente.from(tabla).upsert(filas.slice(i, i + 100), { onConflict: 'id' }))
+    },
+    async borrarFilas(tabla, localId, ids) {
+      for (let i = 0; i < ids.length; i += 100) await pedir(`borrar de ${tabla}`, cliente.from(tabla).delete().eq('local_id', localId).in('id', ids.slice(i, i + 100)))
+    },
   }
 }

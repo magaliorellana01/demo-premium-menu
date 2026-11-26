@@ -11,7 +11,7 @@
     "verificar:rls": "node --env-file=.env scripts/verificar-rls.mjs",
     "imagenes": "node scripts/optimizar-imagenes.mjs",
     "marca": "node scripts/generar-marca.mjs",
-    "probar": "node scripts/probar-horarios.mjs && node scripts/probar-contacto.mjs && node scripts/probar-filtros.mjs && node scripts/probar-precios.mjs && node scripts/probar-permisos.mjs && node scripts/probar-categorias.mjs && node scripts/probar-productos.mjs && node scripts/probar-ajustes.mjs && node scripts/probar-cuenta.mjs && node scripts/probar-clientes.mjs",
+    "probar": "node scripts/probar-horarios.mjs && node scripts/probar-contacto.mjs && node scripts/probar-filtros.mjs && node scripts/probar-precios.mjs && node scripts/probar-permisos.mjs && node scripts/probar-categorias.mjs && node scripts/probar-productos.mjs && node scripts/probar-ajustes.mjs && node scripts/probar-cuenta.mjs && node scripts/probar-clientes.mjs && node scripts/probar-demo.mjs",
     "verificar:permisos": "node --env-file=.env scripts/verificar-permisos.mjs",
     "verificar:secretos": "node scripts/verificar-secretos.mjs",
     "probar:atras": "vite build && node --env-file=.env scripts/probar-atras.mjs",
@@ -19,7 +19,9 @@
     "cliente:password": "node --env-file=.env scripts/clientes/password.mjs",
     "cliente:estado": "node --env-file=.env scripts/clientes/estado.mjs",
     "cliente:baja": "node --env-file=.env scripts/clientes/baja.mjs",
-    "pruebas:usuarios": "node --env-file=.env scripts/clientes/usuarios-prueba.mjs"
+    "pruebas:usuarios": "node --env-file=.env scripts/clientes/usuarios-prueba.mjs",
+    "demo:guardar": "node --env-file=.env scripts/demo/guardar.mjs",
+    "demo:reiniciar": "node --env-file=.env scripts/demo/reiniciar.mjs"
   },
   "dependencies": {
     "@supabase/postgrest-js": "2.119.2",

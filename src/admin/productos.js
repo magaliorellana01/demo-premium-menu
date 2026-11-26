@@ -7,6 +7,7 @@ import { interpretarPrecio, limpiarNombre, moverCategoria, ordenarCategorias, pr
 import { claveEtiqueta, ETIQUETAS } from '../lib/etiquetas.js'
 import { normalizarTexto, terminosDeBusqueda } from '../lib/filtros.js'
 import { LARGO_MAX_NOMBRE, MAX_VARIANTES, precioBase, variantesDe } from '../lib/precios.js'
+import { esCarpetaLlena, MENSAJE_CARPETA_LLENA } from './fotos.js'
 
 export const LARGO_MAX_NOMBRE_PRODUCTO = 60
 export const LARGO_MAX_DESCRIPCION = 200
@@ -200,6 +201,7 @@ export function mensajeDeErrorProducto(error) {
   const texto = String(error?.message ?? '')
   const estado = String(error?.statusCode ?? error?.status ?? '')
   if (error?.paso === 'foto') {
+    if (esCarpetaLlena(error)) return MENSAJE_CARPETA_LLENA
     if (estado === '413' || /exceeded the maximum allowed size/i.test(texto)) return 'No se pudo subir la foto: pesa demasiado.'
     if (estado === '415' || /mime type/i.test(texto)) return 'No se pudo subir la foto: ese tipo de archivo no está permitido.'
     if (estado === '403' || /row-level security|unauthorized/i.test(texto)) return 'No tenés permiso para subir fotos a este local.'

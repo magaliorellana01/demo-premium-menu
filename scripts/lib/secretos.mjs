@@ -13,6 +13,45 @@ const ASIGNACION = new RegExp(
 // Vite publica todo lo VITE_: un nombre así con "secret" o el rol secreto es un error.
 const NOMBRE_PUBLICADO = new RegExp(`\\bVITE_[A-Z0-9_]*(?:SECRET|${ROL.toUpperCase()})[A-Z0-9_]*[ \\t]*=`)
 
+// Ninguna contraseña con VITE_ puede tener un valor escrito en un archivo (la de la demo
+// incluida: en el repo, la variable va vacía).
+const CONTRASENA_ESCRITA = /\bVITE_[A-Z0-9_]*PASSWORD[A-Z0-9_]*[ \t]*=(?!=)[ \t]*["']?[^\s"'=;,)}\]]/
+
+// La ÚNICA contraseña pública a propósito: la de la cuenta demo del panel.
+export const PUBLICA_PERMITIDA = 'VITE_DEMO_PASSWORD'
+const DE_LA_DEMO = ['DEMO_PASSWORD', PUBLICA_PERMITIDA]
+const ES_SENSIBLE = /SECRET|PASSWORD/
+
+/**
+ * Problemas en las variables de entorno: { nombre: valor }. Devuelve mensajes SIN valores.
+ * La contraseña de la demo es pública, así que no puede ser igual a ninguna otra.
+ */
+export function problemasDeVariables(variables) {
+  const problemas = []
+  const entradas = Object.entries(variables).filter(([, valor]) => valor)
+  for (const [nombre, valor] of entradas) {
+    if (!nombre.startsWith('VITE_')) continue
+    if (esClaveSecreta(valor)) problemas.push(`${nombre} contiene una clave SECRETA y Vite la publica.`)
+    else if (ES_SENSIBLE.test(nombre) && nombre !== PUBLICA_PERMITIDA) problemas.push(`${nombre}: Vite publica todo lo VITE_. La única contraseña pública permitida es ${PUBLICA_PERMITIDA}.`)
+  }
+  for (const [nombre, valor] of entradas.filter(([n]) => DE_LA_DEMO.includes(n))) {
+    if (esClaveSecreta(valor)) problemas.push(`${nombre} es una clave secreta: no puede ser la contraseña de la demo.`)
+    const repetidas = entradas.filter(([n, v]) => !DE_LA_DEMO.includes(n) && ES_SENSIBLE.test(n) && v === valor).map(([n]) => n)
+    if (repetidas.length) problemas.push(`${nombre} es igual a ${repetidas.join(', ')}. La contraseña de la demo es pública: usá una distinta.`)
+  }
+  return [...new Set(problemas)]
+}
+
+/**
+ * Los valores que no pueden aparecer en un archivo. En lo que se publica (dist/) se permite la
+ * contraseña de la demo; en el repo no. Si repite otra, esa otra igual se sigue buscando.
+ */
+export function valoresProhibidos(variables, { publicado = false } = {}) {
+  return Object.entries(variables)
+    .filter(([nombre, valor]) => ES_SENSIBLE.test(nombre) && valor && valor.length >= 8 && !(publicado && DE_LA_DEMO.includes(nombre)))
+    .map(([nombre, valor]) => ({ nombre, valor }))
+}
+
 function rolDeJwt(carga) {
   try {
     return JSON.parse(Buffer.from(carga, 'base64url').toString('utf8')).role
@@ -43,6 +82,7 @@ export function buscarSecretos(texto, { valores = [] } = {}) {
       if (jwtSecreto(linea)) anotar(`JWT con rol ${ROL}`)
       if (ASIGNACION.test(linea)) anotar('variable de clave secreta con valor')
       if (NOMBRE_PUBLICADO.test(linea)) anotar('variable VITE_ con nombre de secreto (Vite la publica)')
+      if (CONTRASENA_ESCRITA.test(linea)) anotar('variable VITE_ de contraseña con un valor escrito')
       for (const { nombre, valor } of valores) if (valor && linea.includes(valor)) anotar(`valor de ${nombre} del .env`)
     })
   return hallazgos

@@ -117,11 +117,12 @@ public/
   _redirects            Para que /:slug funcione al recargar (Cloudflare Pages)
 scripts/
   verificar-rls.mjs     Prueba de lectura/escritura con la anon key
-  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs, probar-cuenta.mjs, probar-clientes.mjs   Pruebas de lógica pura (npm run probar)
+  probar-horarios.mjs, probar-contacto.mjs, probar-filtros.mjs, probar-precios.mjs, probar-permisos.mjs, probar-categorias.mjs, probar-productos.mjs, probar-ajustes.mjs, probar-cuenta.mjs, probar-clientes.mjs, probar-demo.mjs   Pruebas de lógica pura (npm run probar)
   verificar-permisos.mjs   Aislamiento entre locales contra Supabase real (npm run verificar:permisos)
   verificar-secretos.mjs   Busca claves secretas en el repo y en dist/ (npm run verificar:secretos)
   probar-atras.mjs      "Atrás" y "adelante" con cambios sin guardar, en Chrome (npm run probar:atras)
   clientes/             Alta, contraseña, estado y baja de clientes, y usuarios de prueba (solo en tu computadora)
+  demo/                 Cuenta demo: demo:guardar, demo:reiniciar y la copia versionada (aroma.json)
   optimizar-imagenes.mjs  Optimiza logos y fotos de brand/ para la web (npm run imagenes)
   generar-marca.mjs     Íconos, favicon e imagen Open Graph desde el logo (npm run marca)
   aroma-imagenes.json   Renombres de las fotos de Aroma
@@ -153,6 +154,7 @@ supabase/
   10-admin-productos.sql    Límites de nombres y precio, y función para reordenar productos
   11-admin-ajustes.sql      Protección de columnas de locales, validaciones, updated_at y carpeta del logo
   12-admin-clientes.sql     Slugs reservados del panel y permisos de los scripts de clientes
+  12b-tope-demo.sql         Tope de 60 archivos en la carpeta de la demo (Storage)
 brand/                  Material de origen de la marca (NO se versiona, ver .gitignore)
 ```
 
@@ -565,6 +567,61 @@ npm run cliente:baja '--' --email dueno@ejemplo.com
 SQL Editor (plantillas en la sección 5 de `supabase/08-admin-base.sql`). Un **admin de OESTACK** solo se agrega desde el SQL Editor (sección 4)
 o, para pruebas, con `pruebas:usuarios`.
 
+### Cuenta demo
+
+Para que cualquiera pruebe el panel: **`demo@oestack.com`** (sin buzón; no se le manda ningún mail), **dueña solo de `aroma`** y nunca admin. Se
+usa el local real de la demo (datos ficticios): lo que alguien cambie **se ve en `/aroma`** hasta el próximo reinicio.
+
+**Preparación (en tu computadora, con la clave secreta)**
+
+0. Una sola vez: correr `supabase/12b-tope-demo.sql`. Pone un **tope de 60 archivos** en la carpeta de Aroma en Storage (una foto son 2),
+   con un trigger que vale para cualquier forma de subir; las demás carpetas no cambian. Para sacarlo: `drop function public.tope_carpeta_demo() cascade;`.
+1. En el `.env`: `DEMO_PASSWORD` (entre comillas; 12 o más caracteres con minúscula, mayúscula, número y símbolo). Va a ser pública:
+   que no la uses en ningún otro lado.
+2. Con Aroma como la querés mostrar: `npm run demo:guardar`. Muestra un resumen, pide confirmación y escribe `scripts/demo/aroma.json`
+   (fila del local, categorías y productos con todos sus campos, y nombres de los archivos de Storage). Revisalo y commitealo. No guarda
+   si hay datos de prueba (`ZZ...`).
+3. `npm run demo:reiniciar`. La primera vez crea la cuenta (no hay un comando aparte para crearla).
+
+**Reiniciar** (`npm run demo:reiniciar`, con `--dry-run` para ver qué haría). **Lo recomendable es correrlo antes de cada reunión.**
+
+- Cierra las sesiones de la demo: **borra la cuenta y la crea de nuevo** con `DEMO_PASSWORD`. Así, hasta quien tenía una sesión abierta
+  pierde el permiso en el acto, y se va todo lo que le hayan cambiado desde la API (contraseña, email, segundo factor, datos).
+- Restaura los ajustes de Aroma, repone y corrige categorías y productos (con los mismos ids y el mismo orden), borra los agregados y
+  borra de Storage lo que no esté en la copia. Primero repone y después borra: el menú no queda vacío.
+- Una pestaña que quedó abierta ya no puede guardar nada; al recargarla dice "No tenés acceso a este local" hasta tocar "Salir" y volver a entrar.
+- Solo trabaja con `aroma`. Se niega si la cuenta demo fuera admin o tuviera otro local. Se puede repetir; si se corta, volver a correrlo.
+- Si cambiás Aroma a propósito (precios, productos), **guardá de nuevo** o el próximo reinicio lo deshace.
+- Si la demo usara fotos subidas a Storage y alguien las borrara, no se pueden recuperar (la copia guarda nombres, no imágenes). Hoy usa las
+  de la app (`/locales/aroma/...`), que no se pueden borrar desde el panel.
+
+**En el panel:** con la cuenta demo aparece el aviso "Estás en una cuenta de demostración...", "Mi cuenta" no ofrece cambiar la contraseña y
+"Salir" cierra solo la sesión de ese navegador (por defecto Supabase cerraría las de todas las personas que la estén usando).
+
+**Tarjeta del ingreso:** si el despliegue tiene `VITE_DEMO_EMAIL` y `VITE_DEMO_PASSWORD`, `/admin/login` muestra el email, la contraseña y el
+botón "Entrar a la demo". **Se cargan solo en el despliegue de la demo** (en Vercel: *Settings > Environment Variables*, y volver a desplegar).
+`VITE_DEMO_PASSWORD` tiene que ser igual a `DEMO_PASSWORD`; si cambiás una, cambiá la otra y corré `demo:reiniciar`. En el hosting **nunca** van
+`SUPABASE_SECRET_KEY`, `DEMO_PASSWORD` ni las `TEST_*`. El aviso y lo demás dependen de `VITE_DEMO_EMAIL`: en un despliegue sin ella que use la
+misma base, la cuenta demo entraría igual (con los mismos permisos) pero sin esos avisos.
+
+**Programar el reinicio (más adelante):** no está automatizado a propósito, porque requiere la clave secreta fuera de tu computadora. Si se
+quiere, la opción más simple es el *Programador de tareas* de Windows en tu propia computadora (acción: `npm.cmd`, argumentos `run
+demo:reiniciar`, carpeta del proyecto); como el comando pide confirmación, habría que agregarle antes una forma explícita de confirmar sin
+teclado. Correrlo en un servidor (GitHub Actions, cron del hosting) implicaría guardar ahí la clave secreta: decidirlo con cuidado.
+
+**Riesgos de una cuenta pública** (la interfaz no los evita: la API de Supabase es accesible con la contraseña)
+
+| Riesgo | Alcance | Cómo se mitiga |
+| --- | --- | --- |
+| Cambiar la contraseña (o el email, o agregar un segundo factor) | Nadie más puede entrar a la demo | `demo:reiniciar` |
+| Romper o escribir cualquier cosa en Aroma, incluso imágenes de otros sitios | Se ve en `/aroma`, que se muestra a clientes | `demo:reiniciar` antes de cada reunión |
+| Subir muchos archivos a la carpeta de Aroma (2 MB cada uno) | Como mucho 60 archivos (unos 120 MB). Alguien podría llenarlo y dejar la demo sin poder subir fotos | `supabase/12b-tope-demo.sql` pone el tope; reiniciar lo libera |
+| Pedir un enlace de subida firmado antes de un reinicio y usarlo después (**comprobado**: funciona; esos enlaces no dependen de la cuenta y duran unas 2 horas) | Puede dejar archivos en la carpeta de Aroma aun sin cuenta. No cambia el menú ni ningún dato, y vale el tope de 60 | El siguiente reinicio los borra. Si la demo quedó llena justo antes de una reunión, reiniciar de nuevo |
+| Crear muchísimas categorías o productos, o descripciones enormes (sin tope en la base) | Puede llenar la base y romper `/aroma` | Reiniciar los borra. Para impedirlo hace falta una regla en la base |
+
+Si la demo se publica en serio, conviene mirar de vez en cuando el uso en *Project Settings > Usage* y, para apagarla ya mismo, borrar la
+cuenta: `npm run cliente:baja '--' --email demo@oestack.com --permitir-protegidos`.
+
 ### Usuarios de prueba y verificación de permisos
 
 1. Crear **dos** usuarios de prueba en *Authentication > Users* (con **Auto Confirm User**), por ejemplo `prueba1@...` y `prueba2@...`.
@@ -583,7 +640,8 @@ o, para pruebas, con `pruebas:usuarios`.
    la base, categoría de otro local y reordenar con la función 10); las fotos en Storage (tipos y tamaño no permitidos, caché y que nadie
    escriba, borre ni liste carpetas ajenas); los ajustes (el dueño edita su local; no puede cambiar `slug`, `id`, `activo` ni `updated_at`; la
    base rechaza temas, enlaces y horarios inválidos); que nadie lee el local inactivo desde el menú público; y, si están los usuarios del paso 4:
-   el **editor** edita categorías y productos pero no los ajustes ni la carpeta del logo; el **admin** cambia `activo` y el dueño no; nadie cambia
+   el **editor** edita categorías y productos pero no los ajustes ni la carpeta del logo; con `DEMO_PASSWORD`, que la **cuenta demo** edita
+   aroma y nada fuera de él (no es admin ni cambia `slug` o `activo`); el **admin** cambia `activo` y el dueño no; nadie cambia
    el `slug`; y la base rechaza los slugs reservados. Sin esos usuarios, esas partes se informan como `SALTEADO`.
 6. Cada comprobación imprime `OK` o `FALLÓ`. No deja basura (usa filas temporales inactivas y archivos con el mismo prefijo) y al final verifica
    que todo quedó como estaba. **Requiere haber corrido hasta el `12`.** Las pruebas de ajustes escriben sobre las filas **reales** de `aroma` y
@@ -595,8 +653,9 @@ o, para pruebas, con `pruebas:usuarios`.
 ### Otras comprobaciones
 
 - `npm run verificar:secretos` (mejor después de `npm run build`, y siempre antes de commitear): falla si encuentra una clave `sb_secret_...`, un
-  JWT con rol `service_role`, una variable secreta con valor, un `VITE_` con nombre de secreto, o los valores secretos de tu `.env`, en lo
-  versionado (y lo nuevo sin ignorar) o en `dist/`. No muestra lo que encontró. No revisa el historial viejo de git.
+  JWT con rol `service_role`, una variable secreta con valor, un `VITE_` con nombre de secreto o con contraseña, o los valores secretos de tu `.env`, en lo
+  versionado (y lo nuevo sin ignorar) o en `dist/`. La única excepción: la contraseña de la demo (`VITE_DEMO_PASSWORD`) puede estar en `dist/`
+  (no en el repo); falla si repite cualquier otra clave o contraseña. No muestra lo que encontró. No revisa el historial viejo de git.
 - `npm run probar:atras`: compila y, en el Chrome instalado (sin dependencias; Node 22 o más nuevo), comprueba que con cambios sin guardar
   "atrás", "adelante", las pestañas y recargar pregunten antes. Usa el usuario de prueba 1 y no guarda nada. Correrlo al tocar `main.jsx`, las
   rutas, `lib/atras.js`, `GuardaDeSalida.jsx` o al actualizar React Router. Si Chrome está en otra ruta, definir `CHROME_PATH`.

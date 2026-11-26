@@ -1,5 +1,48 @@
 /* Accesos del encabezado, "Mi cuenta", primeros pasos y la vista de clientes. */
 
+/* ── Cuenta de demostración ─────────────────────────────── */
+.adm-demo {
+  margin: 0;
+  padding: var(--espacio-2) var(--espacio-4);
+  background: var(--color-fondo-suave);
+  color: var(--color-texto);
+  font-size: var(--texto-xs);
+  text-align: center;
+}
+
+/* Las dos tarjetas del ingreso, separadas */
+.adm-centro {
+  gap: var(--espacio-4);
+}
+
+.adm-demo-tarjeta {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.adm-demo-tarjeta h2 {
+  font-size: var(--texto-lg);
+}
+
+.adm-demo-tarjeta dl {
+  display: grid;
+  gap: var(--espacio-2);
+  margin: 0;
+}
+
+.adm-demo-tarjeta dt {
+  font-size: var(--texto-xs);
+  color: var(--adm-texto-suave);
+}
+
+/* Se puede seleccionar y copiar entera, aunque sea larga */
+.adm-demo-tarjeta dd {
+  margin: 0;
+  font-weight: var(--peso-fuerte);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 /* ── Accesos del encabezado (sobre el espresso) ─────────── */
 /* Con un email largo se acorta el email (con "…"), no se parte la marca en dos líneas. */
 .adm-encabezado__fila > .adm-marca {

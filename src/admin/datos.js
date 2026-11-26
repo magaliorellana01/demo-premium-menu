@@ -32,8 +32,9 @@ export async function iniciarSesion(email, password) {
   return { error }
 }
 
-export function cerrarSesion() {
-  return supabase.auth.signOut()
+/** Sin opciones cierra todas las sesiones del usuario; { scope: 'local' }, solo la de este navegador. */
+export function cerrarSesion(opciones) {
+  return supabase.auth.signOut(opciones)
 }
 
 /**

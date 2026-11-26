@@ -58,10 +58,9 @@ export async function sinCortar(tarea) {
   }
 }
 
-const ocultar = (texto) => {
-  const clave = process.env.SUPABASE_SECRET_KEY?.trim()
-  return clave ? String(texto).split(clave).join('[clave oculta]') : String(texto)
-}
+// Ningún mensaje de error puede mostrar la clave secreta ni la contraseña de la demo.
+const ocultar = (texto) =>
+  [process.env.SUPABASE_SECRET_KEY?.trim(), process.env.DEMO_PASSWORD].filter(Boolean).reduce((t, secreto) => t.split(secreto).join('[oculto]'), String(texto))
 
 export async function ejecutar(comando) {
   const terminal = consola()

@@ -6,6 +6,8 @@
 //   anónimo   = sin sesión
 //   editor    = editor solo de "local-prueba" (TEST_EDITOR_*)  } opcionales: los crea y los borra
 //   admin     = admin de OESTACK de pruebas   (TEST_ADMIN_*)   } npm run pruebas:usuarios
+//   demo      = la cuenta pública de la demo (demo@oestack.com, DEMO_PASSWORD): dueña de aroma;
+//               la crea npm run demo:reiniciar
 //
 // Requiere haber corrido supabase/08-admin-base.sql, 09-admin-categorias.sql,
 // 10-admin-productos.sql, 11-admin-ajustes.sql y 12-admin-clientes.sql.
@@ -32,6 +34,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import sharp from 'sharp'
+import { DEMO_EMAIL } from './demo/copia.mjs'
 
 const { VITE_SUPABASE_URL: url, VITE_SUPABASE_ANON_KEY: clave } = process.env
 const credenciales = {
@@ -67,6 +70,7 @@ const c1 = crear()
 const c2 = crear()
 const c3 = crear() // editor
 const c4 = crear() // admin
+const c5 = crear() // cuenta demo
 const par = (nombre) => [process.env[`TEST_${nombre}_EMAIL`], process.env[`TEST_${nombre}_PASSWORD`]]
 const opcionales = { editor: par('EDITOR'), admin: par('ADMIN') }
 const hayEditor = opcionales.editor.every(Boolean)
@@ -951,6 +955,111 @@ try {
     }
   }
 
+  // ═══ CUENTA DEMO (pública) ═══════════════════════════════════
+  if (!process.env.DEMO_PASSWORD) {
+    salteadas.push('cuenta demo (falta DEMO_PASSWORD; el usuario lo crea npm run demo:reiniciar)')
+  } else {
+    seccion('Cuenta demo: quién es')
+    const idDemo = await entrar(c5, [DEMO_EMAIL, process.env.DEMO_PASSWORD], 'cuenta demo')
+    const memD = await c5.from('usuarios_locales').select('user_id, rol, local_id')
+    ver(!memD.error && memD.data.length === 1 && memD.data[0].user_id === idDemo && memD.data[0].local_id === aroma.id && memD.data[0].rol === 'owner', 'Es dueña de aroma y de ningún otro local', memD.error ? msg(memD) : `${memD.data.length} membresía(s)`)
+    const admD = await c5.from('admins').select('user_id')
+    ver(!admD.error && admD.data.length === 0, 'NO es admin y la tabla de admins no le devuelve nada', admD.error ? msg(admD) : `${admD.data.length} fila(s)`)
+    const admOtro = await c5.from('admins').select('user_id').eq('user_id', id1)
+    ver(!admOtro.error && admOtro.data.length === 0, 'Tampoco puede averiguar si otro usuario es admin', admOtro.error ? msg(admOtro) : `${admOtro.data.length} fila(s)`)
+
+    seccion('Cuenta demo: edita categorías y productos de aroma')
+    r = await c5.from('categorias').insert({ local_id: aroma.id, nombre: `${PREFIJO}demo`, activa: false, orden: 995 }).select('id')
+    const catDemo = r.data?.[0]?.id
+    ver(permitida(r), 'Crea una categoría', msgOk(r))
+    r = await c5.from('categorias').update({ nombre: `${PREFIJO}demo2` }).eq('id', catDemo ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'La edita', msgOk(r))
+    r = await c5.from('productos').insert({ local_id: aroma.id, categoria_id: catDemo, nombre: `${PREFIJO}p-demo`, precio: 10, disponible: false }).select('id')
+    const prodDemo = r.data?.[0]?.id
+    ver(permitida(r), 'Crea un producto', msgOk(r))
+    r = await c5.from('productos').update({ precio: 20, destacado: true }).eq('id', prodDemo ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'Lo edita', msgOk(r))
+    r = await c5.from('productos').update({ precio: aromaProd.precio }).eq('id', aromaProd.id).select('id')
+    ver(permitida(r), 'Edita un producto real (escribe el mismo valor)', msgOk(r))
+    r = await c5.from('productos').delete().eq('id', prodDemo ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'Borra el producto', msgOk(r))
+    r = await c5.from('categorias').delete().eq('id', catDemo ?? UUID_INEXISTENTE).select('id')
+    ver(permitida(r), 'Borra la categoría', msgOk(r))
+    const filaAroma = async () => JSON.stringify((await c1.from('locales').select('*').eq('id', aroma.id).single()).data)
+    r = await c5.from('locales').update({ descripcion: aroma.descripcion }).eq('id', aroma.id).select('id')
+    ver(permitida(r), 'Edita los ajustes de aroma (escribe el mismo valor)', msgOk(r))
+
+    seccion('Cuenta demo: lo estructural de aroma, no')
+    const quieta = await filaAroma()
+    for (const [caso, cambios] of Object.entries({ slug: { slug: 'zz-prueba-permisos-demo' }, activo: { activo: false }, id: { id: UUID_INEXISTENTE }, updated_at: { updated_at: '2000-01-01T00:00:00Z' } })) {
+      const x = await c5.from('locales').update(cambios).eq('id', aroma.id).select('id')
+      // Si entrara (la protección falló), se deshace en el momento.
+      if (permitida(x)) await c1.from('locales').update({ activo: true }).eq('id', aroma.id)
+      ver(x.error?.code === '42501' && (await filaAroma()) === quieta, `NO puede cambiar ${caso}`, msg(x))
+    }
+    console.log('NOTA   No se intenta que la cuenta demo BORRE aroma (si la protección fallara se perdería todo): lo impide la política locales_baja_admin.')
+
+    seccion('Cuenta demo: nada fuera de aroma')
+    ver((await c5.from('locales').select('id').eq('slug', 'local-prueba')).data?.length === 0, 'No ve local-prueba')
+    ver((await c5.from('categorias').select('id').eq('local_id', pruebaPorU2.id)).data?.length === 0 && (await c5.from('productos').select('id').eq('local_id', pruebaPorU2.id)).data?.length === 0, 'No ve sus categorías ni sus productos')
+    const vistos = await c5.from('locales').select('id, activo')
+    ver(!vistos.error && vistos.data.every((l) => l.id === aroma.id || l.activo === true), 'De otros locales solo ve lo público (los activos)', `${vistos.data?.length} visible(s)`)
+    const pruebaAntes = JSON.stringify((await c2.from('locales').select('*').eq('id', pruebaPorU2.id).single()).data)
+    const intentosDemo = [
+      ['cambiar el nombre de local-prueba', () => c5.from('locales').update({ nombre: 'Hackeado' }).eq('id', pruebaPorU2.id).select('id')],
+      ['activar local-prueba', () => c5.from('locales').update({ activo: true }).eq('id', pruebaPorU2.id).select('id')],
+      ['borrar local-prueba', () => c5.from('locales').delete().eq('id', pruebaPorU2.id).select('id')],
+      ['crear una categoría en local-prueba', () => c5.from('categorias').insert({ local_id: pruebaPorU2.id, nombre: `${PREFIJO}demo-ajena`, activa: false }).select('id')],
+      ['editar una categoría de local-prueba', () => c5.from('categorias').update({ nombre: 'Hackeada' }).eq('id', pruebaCats[0].id).select('id')],
+      ['crear un producto en local-prueba', () => c5.from('productos').insert({ local_id: pruebaPorU2.id, categoria_id: pruebaCats[0].id, nombre: `${PREFIJO}demo-ajeno`, precio: 1, disponible: false }).select('id')],
+      ['editar un producto de local-prueba', () => c5.from('productos').update({ precio: 1 }).eq('id', pruebaProds[0].id).select('id')],
+      ['borrar un producto de local-prueba', () => c5.from('productos').delete().eq('id', pruebaProds[0].id).select('id')],
+      ['sumarse a local-prueba', () => c5.from('usuarios_locales').insert({ user_id: idDemo, local_id: pruebaPorU2.id, rol: 'owner' }).select()],
+      ['sumar a otra persona a aroma', () => c5.from('usuarios_locales').insert({ user_id: id2, local_id: aroma.id, rol: 'owner' }).select()],
+      ['mover su membresía', () => c5.from('usuarios_locales').update({ local_id: pruebaPorU2.id }).eq('user_id', idDemo).select()],
+      ['sacar al dueño de aroma', () => c5.from('usuarios_locales').delete().eq('user_id', id1).select()],
+      ['hacerse admin', () => c5.from('admins').insert({ user_id: idDemo }).select()],
+      ['crear un local', () => c5.from('locales').insert({ slug: 'zz-prueba-permisos-demo-nuevo', nombre: `${PREFIJO}intruso`, activo: false }).select('id')],
+    ]
+    for (const [caso, intento] of intentosDemo) {
+      const x = await intento()
+      ver(bloqueada(x), `NO puede ${caso}`, msg(x))
+    }
+    ver((await c1.from('usuarios_locales').select('rol').eq('user_id', id1)).data?.length === 1, 'El dueño de aroma conserva su acceso')
+    ver(JSON.stringify((await c2.from('locales').select('*').eq('id', pruebaPorU2.id).single()).data) === pruebaAntes, 'local-prueba quedó igual')
+
+    seccion('Cuenta demo: Storage')
+    const subirDemo = async (ruta, cliente = c5, bytes = WEBP_MINIMO, contentType = 'image/webp') => {
+      const x = await cliente.storage.from('imagenes').upload(ruta, new Blob([bytes], { type: contentType }), { contentType })
+      if (!x.error) creadas.archivos.push([ruta.startsWith(pruebaPorU2.id) ? c2 : c1, ruta])
+      return x
+    }
+    const fotoDemo = `${aroma.id}/productos/${PREFIJO}demo-480.webp`
+    let s5 = await subirDemo(fotoDemo)
+    ver(!s5.error, 'Sube una foto a aroma (como cualquier dueño)', s5.error?.message ?? 'subida')
+    let q5 = await c5.storage.from('imagenes').remove([fotoDemo])
+    ver(!q5.error && q5.data.length === 1, 'Y la puede borrar', q5.error?.message ?? 'borrada')
+    s5 = await subirDemo(`${aroma.id}/productos/${PREFIJO}demo-pesado.webp`, c5, new Uint8Array(2 * 1024 * 1024 + 1024))
+    ver(Boolean(s5.error), 'Más de 2 MB: rechazado', s5.error?.message ?? 'SE SUBIÓ')
+    s5 = await subirDemo(`${aroma.id}/productos/${PREFIJO}demo.svg`, c5, WEBP_MINIMO, 'image/svg+xml')
+    ver(Boolean(s5.error), 'SVG: rechazado', s5.error?.message ?? 'SE SUBIÓ')
+    for (const [caso, ruta] of [['a la carpeta de local-prueba', `${pruebaPorU2.id}/productos/${PREFIJO}demo-ajena.webp`], ['al logo de local-prueba', `${pruebaPorU2.id}/logo/${PREFIJO}demo-ajena.webp`], ['a la raíz del bucket', `${PREFIJO}demo-raiz.webp`], ['a una carpeta inventada', `${UUID_INEXISTENTE}/${PREFIJO}demo.webp`]]) {
+      s5 = await subirDemo(ruta)
+      ver(Boolean(s5.error), `NO puede subir ${caso}`, s5.error?.message ?? 'SE SUBIÓ')
+    }
+    const ajena = `${pruebaPorU2.id}/productos/${PREFIJO}del-dueno-480.webp`
+    const puesta = await subirDemo(ajena, c2)
+    ver(!puesta.error, 'Un dueño normal (usuario 2) sube una foto a su local', puesta.error?.message ?? 'subida')
+    const sigueAjena = async () => (await archivosDe(c2, pruebaPorU2.id)).includes(ajena)
+    await c5.storage.from('imagenes').remove([ajena])
+    ver(await sigueAjena(), 'La demo NO puede borrarla (sigue ahí)')
+    q5 = await c5.storage.from('imagenes').move(ajena, `${aroma.id}/productos/${PREFIJO}robada-480.webp`)
+    if (!q5.error) creadas.archivos.push([c1, `${aroma.id}/productos/${PREFIJO}robada-480.webp`])
+    ver(Boolean(q5.error) && (await sigueAjena()), 'NO puede llevársela', q5.error?.message ?? 'SE MOVIÓ')
+    const listada = await c5.storage.from('imagenes').list(`${pruebaPorU2.id}/productos`)
+    ver(Boolean(listada.error) || listada.data.length === 0, 'NO puede listar esa carpeta', `${listada.data?.length ?? 0} archivo(s)`)
+  }
+
   // ═══ ANÓNIMO ═════════════════════════════════════════════════
   seccion('Anónimo (sin sesión): sigue sin poder escribir en ninguna tabla')
   const falsos = {
@@ -1044,7 +1153,7 @@ try {
   } catch (e) {
     ver(false, 'La limpieza terminó con un error', e.message)
   }
-  await Promise.allSettled([c1, c2, c3, c4].map((c) => c.auth.signOut({ scope: 'local' })))
+  await Promise.allSettled([c1, c2, c3, c4, c5].map((c) => c.auth.signOut({ scope: 'local' })))
 
   for (const que of salteadas) console.log(`\nSALTEADO  No se probó el ${que}.`)
   console.log(`\n${total - fallos}/${total} comprobaciones OK${fallos ? ` · ${fallos} FALLÓ` : ''}`)

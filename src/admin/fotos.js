@@ -122,3 +122,11 @@ export function rutasDesdeUrl(imagenUrl, supabaseUrl, localId) {
 export function pesoLegible(bytes) {
   return `${Math.max(1, Math.round(bytes / 1024))} kB`
 }
+
+/**
+ * ¿La base rechazó la subida por el tope de archivos de la carpeta (supabase/12b-tope-demo.sql,
+ * solo la de la demo)? Storage no deja pasar el mensaje: llega "database error, code: 23514".
+ */
+export const esCarpetaLlena = (error) => /database error, code: 23514/i.test(String(error?.message ?? ''))
+export const MENSAJE_CARPETA_LLENA = 'Se llegó al máximo de archivos de la demo. Borrá una foto que hayas subido o esperá al próximo reinicio.'
+

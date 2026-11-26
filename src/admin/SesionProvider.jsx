@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { SesionContexto } from './contextos'
 import { cerrarSesion as salirDeSupabase, supabase } from './datos'
+import { opcionesDeSalida } from './demo'
+import { esSesionDemo } from './entornoDemo'
 
 // Estado de la sesión con onAuthStateChange.
 //   cargando: todavía no se sabe si hay sesión (evita mostrar el login un instante de más).
@@ -41,10 +43,10 @@ export default function SesionProvider({ children }) {
 
   const cerrarSesion = useCallback(async () => {
     salidaVoluntaria.current = true
-    const { error } = await salirDeSupabase()
+    const { error } = await salirDeSupabase(opcionesDeSalida(esSesionDemo(estado.usuario)))
     if (error) salidaVoluntaria.current = false
     return { error }
-  }, [])
+  }, [estado.usuario])
 
   const limpiarVencida = useCallback(() => setVencida(false), [])
 

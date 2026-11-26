@@ -7,6 +7,7 @@
 import { enlaceInstagram } from '../lib/contacto.js'
 import { ZONA_POR_DEFECTO } from '../lib/horarios.js'
 import { CLAVES_COLOR, COLORES_ORIGINALES, coloresDelTema, contraste, esColor, paleta } from '../lib/tema.js'
+import { esCarpetaLlena, MENSAJE_CARPETA_LLENA } from './fotos.js'
 
 export const LIMITES = { nombre: 60, descripcion: 200, direccion: 120, whatsapp: 30, instagram: 100, frase: 80, aviso: 200 }
 
@@ -435,6 +436,7 @@ export function mensajeDeErrorAjustes(error) {
   const codigo = String(error?.code ?? '')
   const texto = String(error?.message ?? '')
   if (error?.paso === 'foto') {
+    if (esCarpetaLlena(error)) return MENSAJE_CARPETA_LLENA
     if (String(error.statusCode) === '403' || /row-level security|unauthorized/i.test(texto)) return 'No tenés permiso para subir el logo de este local.'
     return 'No pudimos subir el logo. Revisá tu conexión y probá de nuevo.'
   }

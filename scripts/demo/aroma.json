@@ -1,0 +1,439 @@
+{
+  "version": 1,
+  "slug": "aroma",
+  "local": {
+    "nombre": "Aroma",
+    "descripcion": "Cafetería de especialidad. Un café, un ritual.",
+    "logo_url": "/locales/aroma/logo.webp",
+    "tema": {
+      "frase": "menos prisa, más aroma."
+    },
+    "whatsapp": "5491178149507",
+    "instagram": "oestack_",
+    "direccion": "Av. Ejemplo 1234, Buenos Aires",
+    "horarios": {
+      "zona": "America/Argentina/Buenos_Aires",
+      "semana": {
+        "lunes": [
+          {
+            "desde": "08:00",
+            "hasta": "20:00"
+          }
+        ],
+        "jueves": [
+          {
+            "desde": "08:00",
+            "hasta": "20:00"
+          }
+        ],
+        "martes": [
+          {
+            "desde": "08:00",
+            "hasta": "20:00"
+          }
+        ],
+        "sabado": [
+          {
+            "desde": "09:00",
+            "hasta": "21:00"
+          }
+        ],
+        "domingo": [
+          {
+            "desde": "09:00",
+            "hasta": "14:00"
+          }
+        ],
+        "viernes": [
+          {
+            "desde": "08:00",
+            "hasta": "20:00"
+          }
+        ],
+        "miercoles": [
+          {
+            "desde": "08:00",
+            "hasta": "20:00"
+          }
+        ]
+      }
+    },
+    "activo": true,
+    "aviso_texto": "Aviso de ejemplo: el sábado cerramos a las 18:00 por un evento privado.",
+    "aviso_activo": false
+  },
+  "categorias": [
+    {
+      "id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Cafés",
+      "orden": 1,
+      "activa": true,
+      "adicionales": [
+        {
+          "nombre": "Leche vegetal",
+          "precio": 600
+        },
+        {
+          "nombre": "Shot extra",
+          "precio": 800
+        },
+        {
+          "nombre": "Jarabe de vainilla",
+          "precio": 500
+        }
+      ]
+    },
+    {
+      "id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Postres",
+      "orden": 2,
+      "activa": true,
+      "adicionales": []
+    },
+    {
+      "id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Jugos y licuados",
+      "orden": 3,
+      "activa": true,
+      "adicionales": []
+    }
+  ],
+  "productos": [
+    {
+      "id": "4f904c4d-30a6-44c6-94ef-50373ac15fb7",
+      "categoria_id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Espresso",
+      "descripcion": "Café de origen único, corto e intenso.",
+      "precio": 3200,
+      "imagen_url": "/locales/aroma/productos/espresso-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa"
+      ],
+      "orden": 1,
+      "variantes": [
+        {
+          "nombre": "Simple",
+          "precio": 3200
+        },
+        {
+          "nombre": "Doble",
+          "precio": 4200
+        }
+      ]
+    },
+    {
+      "id": "79dae500-abf0-44cf-9d59-46f021d7b220",
+      "categoria_id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Capuchino",
+      "descripcion": "Espresso doble con leche texturizada y espuma cremosa.",
+      "precio": 4800,
+      "imagen_url": "/locales/aroma/productos/capuchino-480.webp",
+      "destacado": true,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano",
+        "sin-tacc"
+      ],
+      "orden": 2,
+      "variantes": [
+        {
+          "nombre": "Chico",
+          "precio": 4800
+        },
+        {
+          "nombre": "Grande",
+          "precio": 6000
+        }
+      ]
+    },
+    {
+      "id": "7c45c222-9af8-4d9b-8b35-9d886c59cd34",
+      "categoria_id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Latte artesanal",
+      "descripcion": "Espresso con leche vaporizada y arte en la espuma.",
+      "precio": 5200,
+      "imagen_url": "/locales/aroma/productos/latte-artesanal-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano",
+        "sin-tacc"
+      ],
+      "orden": 3,
+      "variantes": [
+        {
+          "nombre": "Chico",
+          "precio": 5200
+        },
+        {
+          "nombre": "Grande",
+          "precio": 6500
+        }
+      ]
+    },
+    {
+      "id": "3f365be1-940d-4271-b709-26805a183249",
+      "categoria_id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Latte en vaso",
+      "descripcion": "Leche, espresso y espuma en capas, servido en vaso.",
+      "precio": 5400,
+      "imagen_url": "/locales/aroma/productos/latte-vaso-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano",
+        "sin-tacc"
+      ],
+      "orden": 4,
+      "variantes": [
+        {
+          "nombre": "Chico",
+          "precio": 5400
+        },
+        {
+          "nombre": "Grande",
+          "precio": 6800
+        }
+      ]
+    },
+    {
+      "id": "01ef30ac-0936-4416-933c-51e0974d3a23",
+      "categoria_id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Moca",
+      "descripcion": "Espresso, chocolate y leche vaporizada con cacao.",
+      "precio": 5600,
+      "imagen_url": "/locales/aroma/productos/moca-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 5,
+      "variantes": [
+        {
+          "nombre": "Chico",
+          "precio": 5600
+        },
+        {
+          "nombre": "Grande",
+          "precio": 7000
+        }
+      ]
+    },
+    {
+      "id": "97419377-3ee7-4e3d-82ef-b57d8952add8",
+      "categoria_id": "741fb12f-ee4e-4ffb-8ab9-ce2064906653",
+      "nombre": "Café frío con leche",
+      "descripcion": "Café de filtro helado con leche y hielo.",
+      "precio": 5800,
+      "imagen_url": "/locales/aroma/productos/cafe-frio-480.webp",
+      "destacado": true,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano",
+        "sin-tacc",
+        "nuevo"
+      ],
+      "orden": 6,
+      "variantes": []
+    },
+    {
+      "id": "707b021c-3b8d-4dc0-a975-f4ca6b6ab389",
+      "categoria_id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Croissant",
+      "descripcion": "De manteca, horneado todos los días.",
+      "precio": 3600,
+      "imagen_url": "/locales/aroma/productos/croissant-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 1,
+      "variantes": []
+    },
+    {
+      "id": "9436ba3f-4502-42f1-b45d-253b99bc7399",
+      "categoria_id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Croissant de chocolate",
+      "descripcion": "Masa hojaldrada con barra de chocolate semiamargo.",
+      "precio": 4200,
+      "imagen_url": "/locales/aroma/productos/croissant-chocolate-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 2,
+      "variantes": []
+    },
+    {
+      "id": "599cacf0-d186-4549-9fd1-ae22d63420a9",
+      "categoria_id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Carrot cake",
+      "descripcion": "Bizcocho de zanahoria y nueces con crema de queso.",
+      "precio": 6200,
+      "imagen_url": "/locales/aroma/productos/carrot-cake-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 3,
+      "variantes": []
+    },
+    {
+      "id": "fea5a722-75c6-494c-80e4-6a6003e86099",
+      "categoria_id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Cheesecake de frutos rojos",
+      "descripcion": "Base de galleta, crema suave y salsa de frutos rojos.",
+      "precio": 6800,
+      "imagen_url": "/locales/aroma/productos/cheesecake-480.webp",
+      "destacado": true,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 4,
+      "variantes": []
+    },
+    {
+      "id": "fa29835e-5573-4fb4-8f0b-cc2cdf6d4689",
+      "categoria_id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Torta de chocolate",
+      "descripcion": "Bizcocho húmedo con relleno y cobertura de ganache.",
+      "precio": 6500,
+      "imagen_url": "/locales/aroma/productos/torta-chocolate-480.webp",
+      "destacado": true,
+      "disponible": true,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 5,
+      "variantes": []
+    },
+    {
+      "id": "d8f88ecd-a10b-4633-9e84-eff9c23b8e20",
+      "categoria_id": "33a7e7f2-61a2-413c-a3fe-8b77388f61e6",
+      "nombre": "Tartaleta de frutas",
+      "descripcion": "Masa sablée, crema pastelera y frutas frescas.",
+      "precio": 5900,
+      "imagen_url": "/locales/aroma/productos/tartaleta-480.webp",
+      "destacado": false,
+      "disponible": false,
+      "etiquetas": [
+        "vegetariano"
+      ],
+      "orden": 6,
+      "variantes": []
+    },
+    {
+      "id": "24c2ea2d-e9e9-4ccf-89e7-516dcacdbf9a",
+      "categoria_id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Limonada con menta",
+      "descripcion": "Limón exprimido, menta fresca y hielo.",
+      "precio": 4800,
+      "imagen_url": "/locales/aroma/productos/limonada-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa"
+      ],
+      "orden": 1,
+      "variantes": []
+    },
+    {
+      "id": "320a5400-6e24-43a9-b1ff-e6b96c3d13df",
+      "categoria_id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Jugo de naranja",
+      "descripcion": "Exprimido en el momento.",
+      "precio": 4500,
+      "imagen_url": "/locales/aroma/productos/naranja-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa"
+      ],
+      "orden": 2,
+      "variantes": []
+    },
+    {
+      "id": "9ffba40e-cb57-4fc2-876a-440859afcb8a",
+      "categoria_id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Mango y maracuyá",
+      "descripcion": "Pulpa de fruta, hielo y un toque de menta.",
+      "precio": 5200,
+      "imagen_url": "/locales/aroma/productos/mango-maracuya-480.webp",
+      "destacado": true,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa",
+        "nuevo"
+      ],
+      "orden": 3,
+      "variantes": []
+    },
+    {
+      "id": "3c636df2-ec9b-447e-920d-404d7768c074",
+      "categoria_id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Sandía, lima y menta",
+      "descripcion": "Refrescante, con hielo y lima.",
+      "precio": 5000,
+      "imagen_url": "/locales/aroma/productos/sandia-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa"
+      ],
+      "orden": 4,
+      "variantes": []
+    },
+    {
+      "id": "ea13d712-7564-4e57-8efe-6775fc4a1e9d",
+      "categoria_id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Licuado de frutilla y frutos rojos",
+      "descripcion": "Frutilla, arándanos y frambuesas licuados.",
+      "precio": 5800,
+      "imagen_url": "/locales/aroma/productos/strawberry-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa"
+      ],
+      "orden": 5,
+      "variantes": []
+    },
+    {
+      "id": "6b6a0eb7-57d6-4a33-8ab8-51a609a0cf22",
+      "categoria_id": "95607b7c-753c-4c77-8650-c0387804d0bf",
+      "nombre": "Licuado verde",
+      "descripcion": "Manzana, pepino y espinaca.",
+      "precio": 5800,
+      "imagen_url": "/locales/aroma/productos/verde-480.webp",
+      "destacado": false,
+      "disponible": true,
+      "etiquetas": [
+        "vegano",
+        "sin-tacc",
+        "sin-lactosa"
+      ],
+      "orden": 6,
+      "variantes": []
+    }
+  ],
+  "archivos": []
+}

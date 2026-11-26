@@ -66,6 +66,14 @@ export default function EditorAjustes({ fila, producto, ponerFila, soloLectura, 
   const secciones = Object.keys(FORMULARIOS)
   useCambiosSinGuardar(!soloLectura && (secciones.some(sucio) || logo !== null))
 
+  // "…/ajustes#titulo-horarios" (primeros pasos): recién ahora la sección existe en la página.
+  useEffect(() => {
+    if (!/^#titulo-(info|horarios|logo)$/.test(window.location.hash)) return
+    const titulo = document.getElementById(window.location.hash.slice(1))
+    titulo?.focus({ preventScroll: true })
+    titulo?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }, [])
+
   // La dirección temporal de la vista previa del logo se libera al cambiarla o al salir.
   useEffect(() => {
     const url = logo?.vistaUrl

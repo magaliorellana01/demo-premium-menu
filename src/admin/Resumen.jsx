@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { cargarResumen } from './datos'
+import { leerLocal } from './datosAjustes'
 import { descripcionDeRol, nombreDeRol } from './permisos'
+import PrimerosPasos from './PrimerosPasos'
+import { primerosPasos } from './pasos'
 import Alerta from './ui/Alerta'
 import Boton from './ui/Boton'
 import Tarjeta from './ui/Tarjeta'
 
-// Inicio del local: estado, cantidad de categorías y de productos, y enlaces útiles.
+// Inicio del local: primeros pasos, estado, cantidad de categorías y de productos, y enlaces.
 export default function Resumen() {
-  const { local, rol } = useOutletContext()
+  const { local, rol, permisos } = useOutletContext()
   const [resultado, setResultado] = useState(null) // { clave, datos, error } de la última carga terminada
   const [intento, setIntento] = useState(0)
   const clave = `${local.id}:${intento}`
@@ -16,8 +19,8 @@ export default function Resumen() {
   useEffect(() => {
     let activo = true
     const esta = `${local.id}:${intento}`
-    cargarResumen(local.id).then(
-      (datos) => activo && setResultado({ clave: esta, datos, error: false }),
+    Promise.all([cargarResumen(local.id), leerLocal(local.id)]).then(
+      ([cantidades, fila]) => activo && setResultado({ clave: esta, datos: fila && { ...cantidades, fila }, error: !fila }),
       () => activo && setResultado({ clave: esta, datos: null, error: true }),
     )
     return () => {
@@ -30,9 +33,22 @@ export default function Resumen() {
 
   const valor = (campo) => (estado.cargando ? <span className="adm-esqueleto" aria-hidden="true" /> : estado.datos ? estado.datos[campo] : '–')
 
+  const pasos = primerosPasos(estado.datos, { slug: local.slug, activo: local.activo, puedeEditarLocal: permisos.puedeEditarLocal, esAdmin: permisos.esAdmin })
+  // Sin publicar, la lista va arriba (es lo que hay que hacer); publicado, plegada al final,
+  // donde aparecer después de cargar no mueve nada.
+  const mostrarPasos = !estado.error
+
   return (
     <>
       <h1 className="adm-titulo">Inicio</h1>
+
+      {estado.error && (
+        <Alerta tipo="error" role="alert" acciones={<Boton onClick={() => setIntento((n) => n + 1)}>Reintentar</Boton>}>
+          No pudimos cargar el resumen. Revisá tu conexión.
+        </Alerta>
+      )}
+
+      {mostrarPasos && !local.activo && <PrimerosPasos pasos={pasos} />}
 
       <section className="adm-bloque" aria-labelledby="titulo-resumen" aria-busy={estado.cargando}>
         <h2 id="titulo-resumen" className="adm-subtitulo">
@@ -54,11 +70,6 @@ export default function Resumen() {
             <dd className="adm-dato__numero">{valor('productos')}</dd>
           </Tarjeta>
         </dl>
-        {estado.error && (
-          <Alerta tipo="error" role="alert" acciones={<Boton onClick={() => setIntento((n) => n + 1)}>Reintentar</Boton>}>
-            No pudimos cargar el resumen. Revisá tu conexión.
-          </Alerta>
-        )}
       </section>
 
       <Tarjeta como="section" className="adm-bloque" aria-labelledby="titulo-rol">
@@ -87,6 +98,8 @@ export default function Resumen() {
           <strong>Página del QR:</strong> próximamente.
         </p>
       </section>
+
+      {mostrarPasos && local.activo && <PrimerosPasos pasos={pasos} plegada />}
     </>
   )
 }

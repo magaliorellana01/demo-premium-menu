@@ -59,13 +59,30 @@ export async function cargarAcceso(usuarioId) {
   return armarAcceso({ esAdmin, membresias: membresias.data, todosLosLocales })
 }
 
-/** Cantidad de categorías y de productos del local (cuenta todo, también lo inactivo). */
+/**
+ * Comprueba la contraseña actual volviendo a iniciar sesión con ella (la sesión se renueva).
+ * Devuelve { error }.
+ */
+export async function comprobarPassword(email, password) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password })
+  return { error }
+}
+
+/**
+ * Cambia la contraseña de quien está logueado. current_password hace que Supabase también la
+ * compruebe si el proyecto tiene activado "Require current password when changing password".
+ */
+export async function cambiarPassword(actual, nueva) {
+  const { error } = await supabase.auth.updateUser({ password: nueva, current_password: actual })
+  return { error }
+}
+
+/** Cantidad de categorías, de productos y de productos con foto (cuenta todo, también lo inactivo). */
 export async function cargarResumen(localId) {
-  const [categorias, productos] = await Promise.all([
-    supabase.from('categorias').select('*', { count: 'exact', head: true }).eq('local_id', localId),
-    supabase.from('productos').select('*', { count: 'exact', head: true }).eq('local_id', localId),
-  ])
-  if (categorias.error) throw categorias.error
-  if (productos.error) throw productos.error
-  return { categorias: categorias.count ?? 0, productos: productos.count ?? 0 }
+  const contar = (tabla) => supabase.from(tabla).select('*', { count: 'exact', head: true }).eq('local_id', localId)
+  const respuestas = await Promise.all([contar('categorias'), contar('productos'), contar('productos').not('imagen_url', 'is', null)])
+  const fallo = respuestas.find((r) => r.error)
+  if (fallo) throw fallo.error
+  const [categorias, productos, productosConFoto] = respuestas.map((r) => r.count ?? 0)
+  return { categorias, productos, productosConFoto }
 }

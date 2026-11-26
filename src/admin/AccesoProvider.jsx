@@ -3,6 +3,7 @@ import PantallaAviso from './PantallaAviso'
 import PantallaCarga from './PantallaCarga'
 import { AccesoContexto } from './contextos'
 import { cargarAcceso } from './datos'
+import { armarAcceso } from './permisos'
 import Boton from './ui/Boton'
 import { useSesion } from './useSesion'
 
@@ -36,8 +37,14 @@ export default function AccesoProvider({ usuario, children }) {
       ),
     [],
   )
+  // La vista de clientes acaba de leer todos los locales: se usan tal cual (solo para admins).
+  const sincronizarLocales = useCallback(
+    (lista) =>
+      setResultado((r) => (r?.acceso?.esAdmin ? { ...r, acceso: armarAcceso({ esAdmin: true, todosLosLocales: lista }) } : r)),
+    [],
+  )
   const acceso = resultado?.acceso ?? null
-  const valor = useMemo(() => ({ acceso, recargar, actualizarLocal }), [acceso, recargar, actualizarLocal])
+  const valor = useMemo(() => ({ acceso, recargar, actualizarLocal, sincronizarLocales }), [acceso, recargar, actualizarLocal, sincronizarLocales])
 
   // "Cargando" se deduce: todavía no terminó la carga de ESTE usuario e intento.
   if (resultado?.clave !== clave) return <PantallaCarga />

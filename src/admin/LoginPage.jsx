@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
+import BotonVer from './BotonVer'
 import PantallaCarga from './PantallaCarga'
 import { iniciarSesion } from './datos'
 import { mensajeErrorLogin, validarLogin } from './login'
@@ -9,16 +10,6 @@ import Boton from './ui/Boton'
 import Campo from './ui/Campo'
 import Tarjeta from './ui/Tarjeta'
 import { useSesion } from './useSesion'
-
-function Ojo({ tachado }) {
-  return (
-    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
-      <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinejoin="round" />
-      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.75" />
-      {tachado && <path d="M4 4l16 16" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />}
-    </svg>
-  )
-}
 
 export default function LoginPage() {
   const { cargando, usuario, vencida } = useSesion()
@@ -117,17 +108,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={errores.password}
-              accesorio={
-                <button
-                  type="button"
-                  className="ui-campo__accesorio"
-                  onClick={() => setVerPassword((v) => !v)}
-                  aria-pressed={verPassword}
-                  aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                >
-                  <Ojo tachado={verPassword} />
-                </button>
-              }
+              accesorio={<BotonVer visible={verPassword} onCambiar={setVerPassword} />}
             />
 
             {/* Siempre está en la página, así el lector de pantalla anuncia el texto cuando aparece. */}

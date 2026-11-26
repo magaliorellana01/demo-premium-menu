@@ -5,6 +5,8 @@ import LocalLayout from './LocalLayout'
 import LoginPage from './LoginPage'
 import PaginaAjustes from './PaginaAjustes'
 import PaginaCategorias from './PaginaCategorias'
+import PaginaClientes from './PaginaClientes'
+import PaginaCuenta from './PaginaCuenta'
 import PaginaProducto from './PaginaProducto'
 import PaginaProductos from './PaginaProductos'
 import PantallaAviso from './PantallaAviso'
@@ -50,6 +52,9 @@ export default function AdminApp() {
             <Route path="login" element={<LoginPage />} />
             <Route element={<RutaProtegida />}>
               <Route index element={<InicioAdmin />} />
+              {/* Antes que ":slug": la base reserva estos nombres (supabase/12-admin-clientes.sql). */}
+              <Route path="cuenta" element={<PaginaCuenta />} />
+              <Route path="clientes" element={<PaginaClientes />} />
               <Route path=":slug" element={<LocalLayout />}>
                 <Route index element={<Resumen />} />
                 <Route path="categorias" element={<PaginaCategorias />} />

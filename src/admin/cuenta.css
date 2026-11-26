@@ -1,0 +1,293 @@
+/* Accesos del encabezado, "Mi cuenta", primeros pasos y la vista de clientes. */
+
+/* ── Accesos del encabezado (sobre el espresso) ─────────── */
+/* Con un email largo se acorta el email (con "…"), no se parte la marca en dos líneas. */
+.adm-encabezado__fila > .adm-marca {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* La columna no crece según el contenido: así el email puede achicarse. */
+.adm-encabezado__interior {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.adm-usuario__email {
+  align-self: stretch;
+  min-width: 0;
+  text-align: right;
+}
+
+.adm-accesos {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--espacio-4);
+  /* La fila de arriba ya deja aire: los enlaces conservan 44px de alto sin agrandar de más. */
+  margin-block: calc(var(--espacio-2) * -1);
+}
+
+.adm-acceso {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-toque);
+  color: var(--color-sobre-oscuro);
+  font-size: var(--texto-sm);
+  text-underline-offset: 0.2em;
+}
+
+.adm-acceso:hover {
+  color: var(--color-sobre-oscuro);
+}
+
+.adm-acceso[aria-current='page'] {
+  font-weight: var(--peso-fuerte);
+  text-decoration-thickness: 2px;
+}
+
+/* ── Título con "Volver" ────────────────────────────────── */
+.cli-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--espacio-2) var(--espacio-4);
+}
+
+.cli-volver {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-toque);
+  color: var(--adm-texto); /* sobre el fondo del panel el cobre no llega a AA */
+  font-size: var(--texto-sm);
+}
+
+/* ── Mi cuenta ──────────────────────────────────────────── */
+.cuenta-datos {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+}
+
+.cuenta-datos dt {
+  font-size: var(--texto-xs);
+  color: var(--adm-texto-suave);
+}
+
+.cuenta-datos dd {
+  display: grid;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.cuenta-requisitos {
+  display: grid;
+  gap: var(--espacio-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--texto-sm);
+  color: var(--adm-texto-suave);
+}
+
+.cuenta-requisitos [data-cumple='true'] {
+  color: var(--adm-exito);
+  font-weight: var(--peso-fuerte);
+}
+
+/* ── Primeros pasos ─────────────────────────────────────── */
+.pasos__avance {
+  margin: 0;
+}
+
+.pasos__lista {
+  display: grid;
+  gap: var(--espacio-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pasos__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--espacio-3);
+  padding-top: var(--espacio-3);
+  border-top: 1px solid var(--adm-borde);
+}
+
+.pasos__marca {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 2px solid var(--adm-borde-control);
+  border-radius: 50%;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-fuerte);
+  line-height: 1;
+}
+
+.pasos__item[data-hecho='true'] .pasos__marca {
+  border-color: var(--adm-exito);
+  background: var(--adm-exito-fondo);
+  color: var(--adm-exito);
+}
+
+.pasos__titulo {
+  font-family: var(--fuente-texto);
+  font-size: var(--texto-base);
+  font-style: normal;
+  font-weight: var(--peso-fuerte);
+}
+
+.pasos__ayuda {
+  font-size: var(--texto-sm);
+  color: var(--adm-texto-suave);
+}
+
+.pasos__pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--espacio-3);
+  min-height: var(--alto-toque); /* con o sin enlace ocupa lo mismo */
+  font-size: var(--texto-sm);
+}
+
+/* Ancho fijo: "Revisando…" y "Pendiente" no corren el enlace */
+.pasos__estado {
+  min-width: 6.5em;
+  font-weight: var(--peso-fuerte);
+}
+
+.pasos__item[data-hecho='true'] .pasos__estado {
+  color: var(--adm-exito);
+}
+
+.pasos__enlace {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--alto-toque);
+  color: var(--color-acento-texto);
+}
+
+.pasos__nota {
+  color: var(--adm-texto-suave);
+}
+
+.pasos__resumen {
+  display: flex;
+  align-items: center;
+  min-height: var(--alto-toque);
+  font-weight: var(--peso-fuerte);
+  cursor: pointer;
+}
+
+.pasos__resumen::before {
+  content: '▸';
+  margin-right: var(--espacio-2);
+}
+
+.pasos details[open] > .pasos__resumen::before {
+  content: '▾';
+}
+
+/* ── Clientes ───────────────────────────────────────────── */
+.cli-filtros {
+  display: grid;
+  gap: var(--espacio-3);
+}
+
+.cli-cantidad {
+  margin: 0;
+  font-size: var(--texto-sm);
+}
+
+.cli-lista {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--espacio-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cli {
+  display: grid;
+  align-content: start; /* en la misma fila, una tarjeta más baja no estira sus renglones */
+  gap: var(--espacio-3);
+  height: 100%;
+}
+
+.cli--esqueleto {
+  min-height: 18rem;
+}
+
+.cli__cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--espacio-3);
+}
+
+.cli__nombre {
+  font-size: var(--texto-lg);
+  overflow-wrap: anywhere;
+}
+
+.cli__slug {
+  margin: 0;
+  color: var(--adm-texto-suave);
+  font-size: var(--texto-sm);
+  overflow-wrap: anywhere;
+}
+
+.cli__datos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--espacio-2) var(--espacio-3);
+  margin: 0;
+}
+
+.cli__datos dt {
+  font-size: var(--texto-xs);
+  color: var(--adm-texto-suave);
+}
+
+.cli__datos dd {
+  margin: 0;
+  font-weight: var(--peso-fuerte);
+}
+
+.cli__fecha {
+  grid-column: 1 / -1;
+}
+
+.cli__estado {
+  margin: 0;
+  font-size: var(--texto-sm);
+  color: var(--adm-exito);
+}
+
+.cli__estado:empty {
+  position: absolute; /* sigue en la página (se anuncia al llenarse) sin dejar un hueco */
+}
+
+@media (min-width: 640px) {
+  .cli-filtros {
+    grid-template-columns: minmax(0, 1fr) 12rem;
+  }
+}
+
+@media (min-width: 900px) {
+  /* Dos clases: le gana a .adm-contenido--sin-pestanas, que viene después (admin.css). */
+  .adm-contenido.adm-contenido--ancho {
+    max-width: var(--adm-ancho);
+  }
+
+  .adm-contenido--ancho .cli-lista {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

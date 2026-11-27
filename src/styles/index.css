@@ -8,3 +8,56 @@
 @import './precios.css';
 @import './visitanos.css';
 @import './esqueleto.css';
+
+.pie-credito,
+.pie-cta {
+  margin: 0.25rem 0;
+}
+
+.pie-credito a,
+.pie-cta a {
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.pie-credito a {
+  opacity: 0.85;
+}
+
+.pie-cta a {
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.pie-credito a:hover,
+.pie-credito a:focus-visible,
+.pie-cta a:hover,
+.pie-cta a:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.pie-admin-wrap {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  text-align: center;
+}
+
+.pie-admin {
+  display: inline-block;
+  font-size: 0.8125rem;
+  color: inherit;
+  opacity: 0.72;
+  text-decoration: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  transition: opacity 0.15s ease;
+}
+
+.pie-admin:hover,
+.pie-admin:focus-visible {
+  opacity: 1;
+  text-decoration: underline;
+}

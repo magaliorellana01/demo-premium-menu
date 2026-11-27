@@ -13,7 +13,20 @@ function urlPublica(env) {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), urlPublica(loadEnv(mode, process.cwd(), 'VITE_'))],
+  plugins: [
+    {
+      name: 'redirigir-raiz-dev',
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url === '/') {
+            res.writeHead(302, { Location: '/aroma' });
+            res.end();
+            return;
+          }
+          next();
+        });
+      },
+    },react(), urlPublica(loadEnv(mode, process.cwd(), 'VITE_'))],
   // Sin el polyfill de modulepreload (solo servía a navegadores muy viejos, que igual cargan los
   // módulos sin precarga): el JS del menú público es un poco más chico.
   build: { modulePreload: { polyfill: false } },

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useIdioma } from '../i18n/useIdioma'
 import { comportamientoScroll } from '../lib/movimiento'
 import { useAparecer } from '../lib/useAparecer'
 import TarjetaProducto from './TarjetaProducto'
 
-const MARGEN = 4 // px de tolerancia al medir los extremos de la fila
+const MARGEN = 4
 
 function Flecha({ direccion }) {
   return (
@@ -20,12 +21,10 @@ function Flecha({ direccion }) {
   )
 }
 
-// Productos destacados en una fila horizontal que se desliza (con el dedo, el
-// trackpad, el teclado o, en pantallas grandes, con los botones). Sin destacados
-// no se muestra.
 export default function Destacados({ productos }) {
   const seccionRef = useAparecer()
   const filaRef = useRef(null)
+  const { t } = useIdioma()
   const [estado, setEstado] = useState({ desborda: false, anterior: false, siguiente: false })
 
   const medir = useCallback(() => {
@@ -64,7 +63,6 @@ export default function Destacados({ productos }) {
     fila.scrollBy({ left: sentido * fila.clientWidth * 0.8, behavior: comportamientoScroll() })
   }
 
-  // aria-disabled (y no disabled) para que el foco no se pierda al llegar a un extremo.
   const boton = (sentido, nombre, etiqueta, activo) => (
     <button
       type="button"
@@ -82,18 +80,17 @@ export default function Destacados({ productos }) {
       <div className="destacados__interior">
         <div className="destacados__cabecera">
           <h2 id="titulo-destacados" className="destacados__titulo">
-            Destacados
+            {t('destacados')}
           </h2>
           {estado.desborda && (
             <div className="destacados__flechas">
-              {boton(-1, 'anterior', 'Ver destacados anteriores', estado.anterior)}
-              {boton(1, 'siguiente', 'Ver más destacados', estado.siguiente)}
+              {boton(-1, 'anterior', t('destacadosAnteriores'), estado.anterior)}
+              {boton(1, 'siguiente', t('destacadosSiguientes'), estado.siguiente)}
             </div>
           )}
         </div>
 
-        {/* tabIndex: al no haber controles dentro de las tarjetas, la fila misma se enfoca y se mueve con las flechas del teclado */}
-        <ul className="destacados__fila" ref={filaRef} role="list" tabIndex={0} aria-label="Productos destacados">
+        <ul className="destacados__fila" ref={filaRef} role="list" tabIndex={0} aria-label={t('productosDestacados')}>
           {productos.map((producto, indice) => (
             <TarjetaProducto key={producto.id} producto={producto} compacta prioridad={indice < 3} />
           ))}

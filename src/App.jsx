@@ -1,3 +1,4 @@
+import ProveedorIdioma from './i18n/ProveedorIdioma'
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import MenuPage from './pages/MenuPage'
@@ -15,7 +16,8 @@ function CargandoPanel() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <ProveedorIdioma>
+      <BrowserRouter>
       <Routes>
         <Route
           path="/admin/*"
@@ -29,5 +31,6 @@ export default function App() {
         <Route path="*" element={<NoEncontrado />} />
       </Routes>
     </BrowserRouter>
+    </ProveedorIdioma>
   )
 }

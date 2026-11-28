@@ -3,26 +3,28 @@ import { useParams } from 'react-router-dom'
 import Carta from '../components/Carta'
 import Esqueleto from '../components/Esqueleto'
 import PantallaMensaje from '../components/PantallaMensaje'
+import { useIdioma } from '../i18n/useIdioma'
 import { useLocal } from '../lib/useLocal'
 import NoEncontrado from './NoEncontrado'
 
 export default function MenuPage() {
   const { slug } = useParams()
   const { cargando, local, error } = useLocal(slug)
+  const { t } = useIdioma()
 
   useEffect(() => {
     if (!local) return
-    document.title = `${local.nombre} · Menú`
-    document.querySelector('meta[name="description"]')?.setAttribute('content', local.descripcion || `Menú de ${local.nombre}.`)
-  }, [local])
+    document.title = `${local.nombre} \u00b7 ${t('menu')}`
+    document.querySelector('meta[name="description"]')?.setAttribute('content', local.descripcion || `${t('menuDe')} ${local.nombre}.`)
+  }, [local, t])
 
   if (cargando) return <Esqueleto />
   if (error) {
     return (
-      <PantallaMensaje titulo="No pudimos cargar el menú">
-        <p className="pantalla__texto">Parece un problema de conexión. Probá de nuevo en unos instantes.</p>
+      <PantallaMensaje titulo={t('errorCargarTitulo')}>
+        <p className="pantalla__texto">{t('errorCargarTexto')}</p>
         <button type="button" className="boton boton--oscuro" onClick={() => window.location.reload()}>
-          Reintentar
+          {t('reintentar')}
         </button>
       </PantallaMensaje>
     )

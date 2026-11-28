@@ -61,3 +61,46 @@
   opacity: 1;
   text-decoration: underline;
 }
+
+.portada__idiomas {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 1rem;
+}
+
+.selector-idioma {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+.selector-idioma__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.38rem 0.62rem;
+  border-radius: 999px;
+  cursor: pointer;
+  opacity: 0.75;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.selector-idioma__btn:hover,
+.selector-idioma__btn:focus-visible {
+  opacity: 1;
+}
+
+.selector-idioma__btn.is-activo {
+  opacity: 1;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}

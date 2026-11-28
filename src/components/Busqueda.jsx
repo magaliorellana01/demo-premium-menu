@@ -1,4 +1,6 @@
 import { useRef } from 'react'
+import { traducirEtiqueta } from '../i18n/traducciones'
+import { useIdioma } from '../i18n/useIdioma'
 import { ID_CAMPO_BUSQUEDA } from '../lib/filtros'
 
 function Lupa() {
@@ -18,17 +20,12 @@ function Cruz() {
   )
 }
 
-// Buscador, filtros por etiqueta y recuento de resultados.
-//   filtros:     lo que devuelve useFiltros (texto, etiquetas, escribir, ...)
-//   disponibles: etiquetas que existen en el local (en el orden del vocabulario)
-//   total:       productos que cumplen la búsqueda y los filtros
-//   activos:     ¿hay búsqueda o filtros puestos?
 export default function Busqueda({ filtros, disponibles, total, activos }) {
   const campoRef = useRef(null)
+  const { idioma, t } = useIdioma()
   const { texto, etiquetas, escribir, limpiarTexto, alternarEtiqueta, limpiarTodo } = filtros
 
   const alTeclear = (evento) => {
-    // Escape borra lo escrito (y evita el borrado nativo de type="search").
     if (evento.key === 'Escape' && texto) {
       evento.preventDefault()
       limpiarTexto()
@@ -37,7 +34,7 @@ export default function Busqueda({ filtros, disponibles, total, activos }) {
 
   const borrar = () => {
     limpiarTexto()
-    campoRef.current?.focus() // el botón desaparece: el foco vuelve al campo
+    campoRef.current?.focus()
   }
 
   const limpiar = () => {
@@ -45,14 +42,14 @@ export default function Busqueda({ filtros, disponibles, total, activos }) {
     campoRef.current?.focus()
   }
 
-  const recuento = total === 0 ? 'Sin resultados' : `${total} ${total === 1 ? 'producto' : 'productos'}`
+  const recuento = total === 0 ? t('sinResultados') : `${total} ${total === 1 ? t('producto') : t('productos')}`
 
   return (
-    <section className="busqueda" aria-label="Buscar y filtrar el menú">
+    <section className="busqueda" aria-label={t('buscarYFiltrar')}>
       <div className="busqueda__interior">
         <div className="busqueda__campo" role="search">
           <label htmlFor={ID_CAMPO_BUSQUEDA} className="solo-lectores">
-            Buscar en el menú
+            {t('buscarPlaceholder')}
           </label>
           <Lupa />
           <input
@@ -63,7 +60,7 @@ export default function Busqueda({ filtros, disponibles, total, activos }) {
             value={texto}
             onChange={(evento) => escribir(evento.target.value)}
             onKeyDown={alTeclear}
-            placeholder="Buscar en el menú"
+            placeholder={t('buscarPlaceholder')}
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -71,14 +68,14 @@ export default function Busqueda({ filtros, disponibles, total, activos }) {
             maxLength={80}
           />
           {texto && (
-            <button type="button" className="busqueda__borrar" onClick={borrar} aria-label="Borrar búsqueda">
+            <button type="button" className="busqueda__borrar" onClick={borrar} aria-label={t('limpiarBusqueda')}>
               <Cruz />
             </button>
           )}
         </div>
 
         {disponibles.length > 0 && (
-          <div className="filtros" role="group" aria-label="Filtrar por etiqueta">
+          <div className="filtros" role="group" aria-label={t('filtrarPorEtiqueta')}>
             {disponibles.map((etiqueta) => (
               <button
                 key={etiqueta.clave}
@@ -88,7 +85,7 @@ export default function Busqueda({ filtros, disponibles, total, activos }) {
                 title={etiqueta.descripcion || undefined}
                 onClick={() => alternarEtiqueta(etiqueta.clave)}
               >
-                {etiqueta.nombre}
+                {traducirEtiqueta(etiqueta, idioma)}
               </button>
             ))}
           </div>
@@ -100,7 +97,7 @@ export default function Busqueda({ filtros, disponibles, total, activos }) {
           </p>
           {activos && total > 0 && (
             <button type="button" className="busqueda__limpiar" onClick={limpiar}>
-              Limpiar filtros
+              {t('limpiarFiltros')}
             </button>
           )}
         </div>
